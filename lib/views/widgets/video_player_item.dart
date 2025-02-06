@@ -52,12 +52,12 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
       });
     }
 
-    // Handle play/pause
-    if (widget.isPlaying != oldWidget.isPlaying && _videoPlayerController != null) {
+    // Handle play/pause state changes
+    if (widget.isPlaying != oldWidget.isPlaying) {
       if (widget.isPlaying) {
-        _videoPlayerController!.play();
+        _videoPlayerController?.play();
       } else {
-        _videoPlayerController!.pause();
+        _videoPlayerController?.pause();
       }
     }
   }

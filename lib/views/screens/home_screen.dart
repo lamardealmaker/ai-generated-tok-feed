@@ -15,6 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final VideoController videoController = Get.put(VideoController());
   bool _isTrendingSelected = true;
   late PageController _pageController;
+  bool _isPageChanging = false;
 
   @override
   void initState() {
@@ -98,21 +99,31 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Obx(
         () => videoController.isLoading.value
             ? const Center(child: CircularProgressIndicator())
-            : PageView.builder(
-                scrollDirection: Axis.vertical,
-                controller: _pageController,
-                onPageChanged: (index) {
-                  videoController.onVideoIndexChanged(index);
+            : NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollStartNotification) {
+                    setState(() => _isPageChanging = true);
+                  } else if (notification is ScrollEndNotification) {
+                    setState(() => _isPageChanging = false);
+                  }
+                  return true;
                 },
-                itemCount: videoController.videos.length,
-                itemBuilder: (context, index) {
-                  final video = videoController.videos[index];
-                  return VideoPlayerItem(
-                    key: Key(video.id),
-                    video: video,
-                    isPlaying: videoController.currentVideoIndex.value == index,
-                  );
-                },
+                child: PageView.builder(
+                  scrollDirection: Axis.vertical,
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    videoController.onVideoIndexChanged(index);
+                  },
+                  itemCount: videoController.videos.length,
+                  itemBuilder: (context, index) {
+                    final video = videoController.videos[index];
+                    return VideoPlayerItem(
+                      key: Key(video.id),
+                      video: video,
+                      isPlaying: videoController.currentVideoIndex.value == index && !_isPageChanging,
+                    );
+                  },
+                ),
               ),
       ),
     );

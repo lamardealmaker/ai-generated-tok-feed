@@ -145,15 +145,18 @@ class VideoController extends GetxController {
       print('Initializing video ${video.id} at index $index'); // Debug print
       print('Video URL: ${video.videoUrl}'); // Debug print
 
+      // Check if we already have an initialized controller
+      if (_videoControllers.containsKey(video.id) && 
+          _videoControllers[video.id]!.value.isInitialized) {
+        print('Using existing controller for ${video.id}'); // Debug print
+        return;
+      }
+
+      // Only dispose if we're creating a new controller
       if (_videoControllers.containsKey(video.id)) {
         print('Disposing existing controller for ${video.id}'); // Debug print
         await _videoControllers[video.id]!.dispose();
         _videoControllers.remove(video.id);
-      }
-
-      if (video.videoUrl.isEmpty) {
-        print('Error: Video URL is empty for video ${video.id}');
-        return;
       }
 
       // Validate URL format and accessibility
@@ -175,8 +178,8 @@ class VideoController extends GetxController {
           allowBackgroundPlayback: false,
         ),
         httpHeaders: {
-          'User-Agent': 'Mozilla/5.0',  // Add User-Agent header
-          'Accept': '*/*',  // Accept any content type
+          'User-Agent': 'Mozilla/5.0',
+          'Accept': '*/*',
         },
       );
       
@@ -199,23 +202,18 @@ class VideoController extends GetxController {
         print('Playing video ${video.id} as it is the current video'); // Debug print
         await controller.play();
       }
+
+      // Preload next video if available and not already loaded
+      if (index + 1 < videos.length && !_videoControllers.containsKey(videos[index + 1].id)) {
+        print('Preloading next video at index ${index + 1}'); // Debug print
+        _initializeVideo(index + 1);
+      }
     } catch (e) {
       print('Error initializing video ${video.id}: $e');
       // Remove failed controller
       if (_videoControllers.containsKey(video.id)) {
         await _videoControllers[video.id]!.dispose();
         _videoControllers.remove(video.id);
-      }
-      // Remove the video from the list if it fails to initialize
-      videos.removeAt(index);
-      if (videos.isEmpty) {
-        Get.snackbar(
-          'Error',
-          'No playable videos available.',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
       }
     }
   }
