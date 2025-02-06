@@ -6,12 +6,13 @@ class VideoModel {
   final String title;
   final String description;
   final String thumbnailUrl;
-  final String videoUrl;  // This will be placeholder for now
+  final String videoUrl;
   final int likes;
   final int comments;
   final int shares;
+  final bool isFavorite;
   final DateTime createdAt;
-  final Map<String, dynamic> propertyDetails; // Real estate specific data
+  final Map<String, dynamic> propertyDetails;
 
   VideoModel({
     required this.id,
@@ -23,9 +24,18 @@ class VideoModel {
     this.likes = 0,
     this.comments = 0,
     this.shares = 0,
+    this.isFavorite = false,
     required this.createdAt,
     required this.propertyDetails,
-  });
+  }) {
+    // Validate video URL
+    if (videoUrl.isEmpty) {
+      throw ArgumentError('Video URL cannot be empty');
+    }
+    if (!Uri.parse(videoUrl).isAbsolute) {
+      throw ArgumentError('Invalid video URL format');
+    }
+  }
 
   VideoModel copyWith({
     String? id,
@@ -37,6 +47,7 @@ class VideoModel {
     int? likes,
     int? comments,
     int? shares,
+    bool? isFavorite,
     DateTime? createdAt,
     Map<String, dynamic>? propertyDetails,
   }) {
@@ -50,6 +61,7 @@ class VideoModel {
       likes: likes ?? this.likes,
       comments: comments ?? this.comments,
       shares: shares ?? this.shares,
+      isFavorite: isFavorite ?? this.isFavorite,
       createdAt: createdAt ?? this.createdAt,
       propertyDetails: propertyDetails ?? this.propertyDetails,
     );
@@ -66,12 +78,18 @@ class VideoModel {
       'likes': likes,
       'comments': comments,
       'shares': shares,
+      'isFavorite': isFavorite,
       'createdAt': createdAt.toIso8601String(),
       'propertyDetails': propertyDetails,
+      'status': 'active', // Add status field
     };
   }
 
   factory VideoModel.fromJson(Map<String, dynamic> json) {
+    if (json['videoUrl'] == null || json['videoUrl'].toString().isEmpty) {
+      throw ArgumentError('Video URL is required');
+    }
+    
     return VideoModel(
       id: json['id'],
       userId: json['userId'],
@@ -82,6 +100,7 @@ class VideoModel {
       likes: json['likes'],
       comments: json['comments'],
       shares: json['shares'],
+      isFavorite: json['isFavorite'],
       createdAt: DateTime.parse(json['createdAt']),
       propertyDetails: json['propertyDetails'],
     );
@@ -89,18 +108,42 @@ class VideoModel {
 
   factory VideoModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return VideoModel(
-      id: doc.id,
-      userId: data['userId'] ?? '',
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      thumbnailUrl: data['thumbnailUrl'] ?? '',
-      videoUrl: data['videoUrl'] ?? '',
-      likes: data['likes'] ?? 0,
-      comments: data['comments'] ?? 0,
-      shares: data['shares'] ?? 0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      propertyDetails: data['propertyDetails'] ?? {},
-    );
+    
+    // Validate required fields
+    if (data['videoUrl'] == null || data['videoUrl'].toString().isEmpty) {
+      throw ArgumentError('Video URL is required for video ${doc.id}');
+    }
+
+    try {
+      // Handle createdAt that could be either Timestamp or String
+      DateTime createdAt;
+      final createdAtField = data['createdAt'];
+      if (createdAtField is Timestamp) {
+        createdAt = createdAtField.toDate();
+      } else if (createdAtField is String) {
+        createdAt = DateTime.parse(createdAtField);
+      } else {
+        createdAt = DateTime.now(); // Fallback if field is missing or invalid
+        print('Warning: Invalid createdAt format for video ${doc.id}, using current time');
+      }
+
+      return VideoModel(
+        id: doc.id,
+        userId: data['userId'] ?? '',
+        title: data['title'] ?? '',
+        description: data['description'] ?? '',
+        thumbnailUrl: data['thumbnailUrl'] ?? '',
+        videoUrl: data['videoUrl'],  // No default value, will throw if missing
+        likes: (data['likes'] ?? 0).toInt(),
+        comments: (data['comments'] ?? 0).toInt(),
+        shares: (data['shares'] ?? 0).toInt(),
+        isFavorite: data['isFavorite'] ?? false,
+        createdAt: createdAt,
+        propertyDetails: Map<String, dynamic>.from(data['propertyDetails'] ?? {}),
+      );
+    } catch (e) {
+      print('Error creating VideoModel from document ${doc.id}: $e');
+      rethrow;
+    }
   }
 }

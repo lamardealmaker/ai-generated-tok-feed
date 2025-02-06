@@ -156,7 +156,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                 onPressed: () => videoController.likeVideo(widget.video.id),
                 icon: Icon(
                   Icons.favorite,
-                  color: AppColors.white,
+                  color: widget.video.likes > 0 ? AppColors.accent : AppColors.white,
                   size: 30,
                 ),
               ),
@@ -171,7 +171,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                 onPressed: () {
                   _showCommentsSheet(context);
                 },
-                icon: Icon(
+                icon: const Icon(
                   Icons.comment,
                   color: AppColors.white,
                   size: 30,
@@ -183,10 +183,21 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
               ),
               const SizedBox(height: 20),
 
+              // Favorite Button
+              IconButton(
+                onPressed: () => videoController.toggleFavorite(widget.video.id),
+                icon: Icon(
+                  Icons.bookmark,
+                  color: widget.video.isFavorite ? AppColors.accent : AppColors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 20),
+
               // Share Button
               IconButton(
                 onPressed: () => videoController.shareVideo(widget.video.id),
-                icon: Icon(
+                icon: const Icon(
                   Icons.share,
                   color: AppColors.white,
                   size: 30,
@@ -204,6 +215,8 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   }
 
   void _showCommentsSheet(BuildContext context) {
+    final TextEditingController commentController = TextEditingController();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -227,24 +240,63 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                controller: controller,
-                itemCount: 10, // Replace with actual comments
-                itemBuilder: (context, index) => ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: AppColors.accent,
-                    child: Icon(Icons.person, color: AppColors.white),
-                  ),
-                  title: Text(
-                    'User $index',
-                    style: const TextStyle(color: AppColors.white),
-                  ),
-                  subtitle: Text(
-                    'This is a sample comment $index',
-                    style: const TextStyle(color: AppColors.grey),
-                  ),
-                ),
-              ),
+              child: Obx(() {
+                videoController.loadComments(widget.video.id);
+                return ListView.builder(
+                  controller: controller,
+                  itemCount: videoController.comments.length,
+                  itemBuilder: (context, index) {
+                    final comment = videoController.comments[index];
+                    return ListTile(
+                      leading: const CircleAvatar(
+                        backgroundColor: AppColors.accent,
+                        child: Icon(Icons.person, color: AppColors.white),
+                      ),
+                      title: Text(
+                        comment.username,
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            comment.text,
+                            style: const TextStyle(color: AppColors.white),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _getTimeAgo(comment.createdAt),
+                            style: TextStyle(
+                              color: AppColors.grey,
+                              fontSize: AppTheme.fontSize_xs,
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.favorite,
+                            color: comment.likes > 0 ? AppColors.accent : AppColors.grey,
+                            size: 16,
+                          ),
+                          Text(
+                            comment.likes.toString(),
+                            style: TextStyle(
+                              color: AppColors.grey,
+                              fontSize: AppTheme.fontSize_xs,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }),
             ),
             Padding(
               padding: EdgeInsets.only(
@@ -257,6 +309,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                 children: [
                   Expanded(
                     child: TextField(
+                      controller: commentController,
                       style: const TextStyle(color: AppColors.white),
                       decoration: InputDecoration(
                         hintText: 'Add a comment...',
@@ -271,7 +324,14 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                   ),
                   IconButton(
                     onPressed: () {
-                      // Add comment logic
+                      if (commentController.text.isNotEmpty) {
+                        videoController.addComment(
+                          widget.video.id,
+                          commentController.text,
+                        );
+                        commentController.clear();
+                        FocusScope.of(context).unfocus();
+                      }
                     },
                     icon: const Icon(Icons.send, color: AppColors.accent),
                   ),
@@ -282,5 +342,20 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
         ),
       ),
     );
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final difference = DateTime.now().difference(dateTime);
+    if (difference.inSeconds < 60) {
+      return '${difference.inSeconds}s ago';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else {
+      return '${difference.inDays ~/ 7}w ago';
+    }
   }
 }

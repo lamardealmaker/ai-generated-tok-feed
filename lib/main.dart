@@ -5,6 +5,9 @@ import 'constants.dart';
 import 'views/screens/auth/login_screen.dart';
 import 'views/screens/auth/email_verification_screen.dart';
 import 'views/screens/main_screen.dart';
+import 'views/screens/home_screen.dart';
+import 'views/screens/favorites_screen.dart';
+import 'views/screens/profile_screen.dart';
 import 'controllers/auth_controller.dart';
 
 void main() async {
@@ -49,6 +52,9 @@ class MyApp extends StatelessWidget {
         GetPage(name: '/login', page: () => const LoginScreen()),
         GetPage(name: '/verify-email', page: () => const EmailVerificationScreen()),
         GetPage(name: '/home', page: () => const MainScreen()),
+        GetPage(name: '/home-screen', page: () => const HomeScreen()),
+        GetPage(name: '/favorites', page: () => const FavoritesScreen()),
+        GetPage(name: '/profile', page: () => ProfileScreen()),
       ],
     );
   }
