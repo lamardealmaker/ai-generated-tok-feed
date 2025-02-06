@@ -1,22 +1,15 @@
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:video_player/video_player.dart';
 import '../models/video_model.dart';
 import '../models/comment_model.dart';
 
 class VideoController extends GetxController {
-  static VideoController get instance => Get.find();
-
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final RxList<VideoModel> videos = RxList<VideoModel>([]);
   final RxInt currentVideoIndex = 0.obs;
   final RxBool isLoading = false.obs;
-
-  // Placeholder video URLs for testing (using Pexels free stock videos)
-  final List<String> placeholderVideos = [
-    'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4', // Flutter's test video
-    'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', // Google test video
-    'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', // Another Google test video
-  ];
+  
+  // Keep track of preloaded controllers
+  final Map<String, VideoPlayerController> _videoControllers = {};
 
   @override
   void onInit() {
@@ -24,30 +17,53 @@ class VideoController extends GetxController {
     loadVideos();
   }
 
-  // Load videos (currently with placeholder data)
+  @override
+  void onClose() {
+    // Dispose all controllers
+    for (var controller in _videoControllers.values) {
+      controller.dispose();
+    }
+    _videoControllers.clear();
+    super.onClose();
+  }
+
   Future<void> loadVideos() async {
     try {
       isLoading.value = true;
-      // For testing, create placeholder videos
-      videos.value = List.generate(
-        10,
-        (index) => VideoModel(
-          id: 'video_$index',
-          userId: 'user_$index',
-          title: 'Beautiful House $index',
-          description: 'Check out this amazing property! 🏠✨',
-          thumbnailUrl: 'https://picsum.photos/seed/$index/1080/1920',
-          videoUrl: placeholderVideos[index % placeholderVideos.length],
-          createdAt: DateTime.now().subtract(Duration(days: index)),
+      
+      // Sample video URLs that are known to work with autoplay
+      final List<String> videoUrls = [
+        'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        'https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        'https://storage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
+      ];
+
+      videos.value = videoUrls.asMap().entries.map((entry) {
+        return VideoModel(
+          id: 'video_${entry.key}',
+          userId: 'user_1',
+          title: 'Sample Property ${entry.key + 1}',
+          description: 'Beautiful property with amazing views',
+          thumbnailUrl: 'https://picsum.photos/seed/${entry.key}/300/400',
+          videoUrl: entry.value,
+          likes: 0,
+          comments: 0,
+          shares: 0,
+          createdAt: DateTime.now(),
           propertyDetails: {
-            'price': '\$${(500000 + (index * 100000))}',
-            'location': 'City $index',
-            'bedrooms': (2 + (index % 4)).toString(),
-            'bathrooms': (2 + (index % 3)).toString(),
-            'sqft': '${1500 + (index * 500)}',
+            'price': '\$${(500000 + entry.key * 100000).toString()}',
+            'location': 'San Francisco, CA',
+            'bedrooms': '${3 + entry.key}',
+            'bathrooms': '${2 + entry.key}',
+            'sqft': '${2000 + entry.key * 500}',
           },
-        ),
-      );
+        );
+      }).toList();
+
+      // Initialize first video
+      if (videos.isNotEmpty) {
+        await _initializeVideo(0);
+      }
     } catch (e) {
       print('Error loading videos: $e');
     } finally {
@@ -55,86 +71,93 @@ class VideoController extends GetxController {
     }
   }
 
-  // Like video
-  Future<void> likeVideo(String videoId) async {
-    try {
-      final videoIndex = videos.indexWhere((v) => v.id == videoId);
-      if (videoIndex != -1) {
-        final video = videos[videoIndex];
-        videos[videoIndex] = VideoModel(
-          id: video.id,
-          userId: video.userId,
-          title: video.title,
-          description: video.description,
-          thumbnailUrl: video.thumbnailUrl,
-          videoUrl: video.videoUrl,
-          likes: video.likes + 1,
-          comments: video.comments,
-          shares: video.shares,
-          createdAt: video.createdAt,
-          propertyDetails: video.propertyDetails,
-        );
-      }
-    } catch (e) {
-      print('Error liking video: $e');
-    }
-  }
+  Future<void> _initializeVideo(int index) async {
+    if (index < 0 || index >= videos.length) return;
 
-  // Add comment
-  Future<void> addComment(String videoId, String text) async {
+    final video = videos[index];
     try {
-      final comment = CommentModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        videoId: videoId,
-        userId: 'current_user_id', // Replace with actual user ID
-        text: text,
-        createdAt: DateTime.now(),
+      // Dispose previous controller if it exists
+      if (_videoControllers.containsKey(video.id)) {
+        await _videoControllers[video.id]!.dispose();
+        _videoControllers.remove(video.id);
+      }
+
+      // Create and initialize new controller
+      final controller = VideoPlayerController.network(
+        video.videoUrl,
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
       );
-
-      final videoIndex = videos.indexWhere((v) => v.id == videoId);
-      if (videoIndex != -1) {
-        final video = videos[videoIndex];
-        videos[videoIndex] = VideoModel(
-          id: video.id,
-          userId: video.userId,
-          title: video.title,
-          description: video.description,
-          thumbnailUrl: video.thumbnailUrl,
-          videoUrl: video.videoUrl,
-          likes: video.likes,
-          comments: video.comments + 1,
-          shares: video.shares,
-          createdAt: video.createdAt,
-          propertyDetails: video.propertyDetails,
-        );
+      _videoControllers[video.id] = controller;
+      
+      await controller.initialize();
+      controller.setLooping(true);
+      
+      // Only play if it's the current video
+      if (index == currentVideoIndex.value) {
+        controller.play();
       }
     } catch (e) {
-      print('Error adding comment: $e');
+      print('Error initializing video $index: $e');
     }
   }
 
-  // Share video
-  Future<void> shareVideo(String videoId) async {
-    try {
-      final videoIndex = videos.indexWhere((v) => v.id == videoId);
-      if (videoIndex != -1) {
-        final video = videos[videoIndex];
-        videos[videoIndex] = VideoModel(
-          id: video.id,
-          userId: video.userId,
-          title: video.title,
-          description: video.description,
-          thumbnailUrl: video.thumbnailUrl,
-          videoUrl: video.videoUrl,
-          likes: video.likes,
-          comments: video.comments,
-          shares: video.shares + 1,
-          createdAt: video.createdAt,
-          propertyDetails: video.propertyDetails,
-        );
+  Future<void> onVideoIndexChanged(int index) async {
+    // Pause previous video
+    if (currentVideoIndex.value != index && currentVideoIndex.value < videos.length) {
+      final previousVideo = videos[currentVideoIndex.value];
+      final previousController = _videoControllers[previousVideo.id];
+      await previousController?.pause();
+    }
+
+    // Update current index
+    currentVideoIndex.value = index;
+
+    // Initialize next video if not already initialized
+    if (!_videoControllers.containsKey(videos[index].id)) {
+      await _initializeVideo(index);
+    } else {
+      // Play current video
+      final currentVideo = videos[index];
+      final currentController = _videoControllers[currentVideo.id];
+      if (currentController != null) {
+        currentController.play();
       }
-    } catch (e) {
-      print('Error sharing video: $e');
+    }
+
+    // Preload next video
+    if (index + 1 < videos.length) {
+      _initializeVideo(index + 1);
+    }
+  }
+
+  VideoPlayerController? getController(String videoId) {
+    return _videoControllers[videoId];
+  }
+
+  void likeVideo(String videoId) {
+    final index = videos.indexWhere((video) => video.id == videoId);
+    if (index != -1) {
+      final video = videos[index];
+      videos[index] = video.copyWith(likes: video.likes + 1);
+    }
+  }
+
+  void shareVideo(String videoId) {
+    final index = videos.indexWhere((video) => video.id == videoId);
+    if (index != -1) {
+      final video = videos[index];
+      videos[index] = video.copyWith(shares: video.shares + 1);
+    }
+  }
+
+  void addComment(String videoId, String text) {
+    final index = videos.indexWhere((video) => video.id == videoId);
+    if (index != -1) {
+      final video = videos[index];
+      videos[index] = video.copyWith(comments: video.comments + 1);
     }
   }
 }

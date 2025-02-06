@@ -20,8 +20,9 @@ class VideoPlayerItem extends StatefulWidget {
 }
 
 class _VideoPlayerItemState extends State<VideoPlayerItem> {
-  late VideoPlayerController _videoPlayerController;
   final VideoController videoController = Get.find<VideoController>();
+  VideoPlayerController? _videoPlayerController;
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -30,39 +31,35 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   }
 
   void _initializeVideo() {
-    _videoPlayerController = VideoPlayerController.network(widget.video.videoUrl)
-      ..initialize().then((_) {
-        if (mounted) {
-          setState(() {});
-        }
-        if (widget.isPlaying) {
-          _videoPlayerController.play();
-          _videoPlayerController.setLooping(true);
-        }
-      }).catchError((error) {
-        print('Error initializing video: $error');
-        if (mounted) {
-          setState(() {});
-        }
+    _videoPlayerController = videoController.getController(widget.video.id);
+    if (_videoPlayerController != null) {
+      setState(() {
+        _isInitialized = true;
       });
+    }
   }
 
   @override
   void didUpdateWidget(VideoPlayerItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isPlaying != oldWidget.isPlaying) {
+    
+    // Check if we need to update the controller
+    final newController = videoController.getController(widget.video.id);
+    if (newController != _videoPlayerController) {
+      setState(() {
+        _videoPlayerController = newController;
+        _isInitialized = newController != null;
+      });
+    }
+
+    // Handle play/pause
+    if (widget.isPlaying != oldWidget.isPlaying && _videoPlayerController != null) {
       if (widget.isPlaying) {
-        _videoPlayerController.play();
+        _videoPlayerController!.play();
       } else {
-        _videoPlayerController.pause();
+        _videoPlayerController!.pause();
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _videoPlayerController.dispose();
-    super.dispose();
   }
 
   @override
@@ -71,25 +68,34 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
       fit: StackFit.expand,
       children: [
         // Video Player
-        _videoPlayerController.value.isInitialized
-            ? VideoPlayer(_videoPlayerController)
+        _isInitialized && _videoPlayerController != null
+            ? AspectRatio(
+                aspectRatio: _videoPlayerController!.value.aspectRatio,
+                child: VideoPlayer(_videoPlayerController!),
+              )
             : Container(
                 color: AppColors.darkGrey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Loading video...',
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: AppTheme.fontSize_md,
-                      ),
-                    ),
-                  ],
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.accent,
+                  ),
                 ),
               ),
+
+        // Video Controls
+        GestureDetector(
+          onTap: () {
+            if (_videoPlayerController?.value.isPlaying ?? false) {
+              _videoPlayerController?.pause();
+            } else {
+              _videoPlayerController?.play();
+            }
+            setState(() {});
+          },
+          child: Container(
+            color: Colors.transparent,
+          ),
+        ),
 
         // Property Details Overlay
         Positioned(
@@ -148,7 +154,11 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
               // Like Button
               IconButton(
                 onPressed: () => videoController.likeVideo(widget.video.id),
-                icon: const Icon(Icons.favorite, color: AppColors.white),
+                icon: Icon(
+                  Icons.favorite,
+                  color: AppColors.white,
+                  size: 30,
+                ),
               ),
               Text(
                 widget.video.likes.toString(),
@@ -159,10 +169,13 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
               // Comment Button
               IconButton(
                 onPressed: () {
-                  // Show comments sheet
                   _showCommentsSheet(context);
                 },
-                icon: const Icon(Icons.comment, color: AppColors.white),
+                icon: Icon(
+                  Icons.comment,
+                  color: AppColors.white,
+                  size: 30,
+                ),
               ),
               Text(
                 widget.video.comments.toString(),
@@ -173,7 +186,11 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
               // Share Button
               IconButton(
                 onPressed: () => videoController.shareVideo(widget.video.id),
-                icon: const Icon(Icons.share, color: AppColors.white),
+                icon: Icon(
+                  Icons.share,
+                  color: AppColors.white,
+                  size: 30,
+                ),
               ),
               Text(
                 widget.video.shares.toString(),

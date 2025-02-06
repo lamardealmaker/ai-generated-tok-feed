@@ -27,6 +27,34 @@ class VideoModel {
     required this.propertyDetails,
   });
 
+  VideoModel copyWith({
+    String? id,
+    String? userId,
+    String? title,
+    String? description,
+    String? thumbnailUrl,
+    String? videoUrl,
+    int? likes,
+    int? comments,
+    int? shares,
+    DateTime? createdAt,
+    Map<String, dynamic>? propertyDetails,
+  }) {
+    return VideoModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      videoUrl: videoUrl ?? this.videoUrl,
+      likes: likes ?? this.likes,
+      comments: comments ?? this.comments,
+      shares: shares ?? this.shares,
+      createdAt: createdAt ?? this.createdAt,
+      propertyDetails: propertyDetails ?? this.propertyDetails,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

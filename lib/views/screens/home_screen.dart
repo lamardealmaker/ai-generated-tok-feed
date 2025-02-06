@@ -14,6 +14,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final VideoController videoController = Get.put(VideoController());
   bool _isTrendingSelected = true;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void _switchTab(bool isTrending) {
     setState(() {
@@ -87,14 +100,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ? const Center(child: CircularProgressIndicator())
             : PageView.builder(
                 scrollDirection: Axis.vertical,
-                controller: PageController(initialPage: 0, viewportFraction: 1),
-                itemCount: videoController.videos.length,
+                controller: _pageController,
                 onPageChanged: (index) {
-                  videoController.currentVideoIndex.value = index;
+                  videoController.onVideoIndexChanged(index);
                 },
+                itemCount: videoController.videos.length,
                 itemBuilder: (context, index) {
                   final video = videoController.videos[index];
                   return VideoPlayerItem(
+                    key: Key(video.id),
                     video: video,
                     isPlaying: videoController.currentVideoIndex.value == index,
                   );
