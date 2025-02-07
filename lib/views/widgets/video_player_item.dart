@@ -70,38 +70,22 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
       fit: StackFit.expand,
       children: [
         // Video Player
-        _isInitialized && _videoPlayerController != null
-            ? AspectRatio(
-                aspectRatio: _videoPlayerController!.value.aspectRatio,
-                child: VideoPlayer(_videoPlayerController!),
-              )
-            : Container(
-                color: AppColors.darkGrey,
-                child: const Center(
+        Container(
+          width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height,
+          decoration: const BoxDecoration(
+            color: AppColors.background,
+          ),
+          child: _isInitialized && _videoPlayerController != null
+              ? AspectRatio(
+                  aspectRatio: _videoPlayerController!.value.aspectRatio,
+                  child: VideoPlayer(_videoPlayerController!),
+                )
+              : const Center(
                   child: CircularProgressIndicator(
                     color: AppColors.accent,
                   ),
                 ),
-              ),
-
-        // Top gradient overlay
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 100,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.overlayStart,
-                  AppColors.overlayEnd,
-                ],
-              ),
-            ),
-          ),
         ),
 
         // Video Controls
@@ -125,43 +109,68 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
           bottom: 0,
           right: 0,
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
                 colors: [
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withOpacity(0.8),
                   Colors.transparent,
                 ],
+                stops: const [0.0, 0.8],
               ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  widget.video.title,
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: AppTheme.fontSize_lg,
-                    fontWeight: FontWeight.bold,
+                if (widget.video.propertyDetails != null) ...[
+                  // Price
+                  Text(
+                    widget.video.propertyDetails!.formattedPrice,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.accent,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${widget.video.propertyDetails?.formattedPrice} • ${widget.video.propertyDetails?.city}, ${widget.video.propertyDetails?.state}',
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: AppTheme.fontSize_md,
+                  const SizedBox(height: 4),
+
+                  // Location
+                  Text(
+                    widget.video.propertyDetails!.fullAddress,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.white,
+                    ),
                   ),
-                ),
-                Text(
-                  '${widget.video.propertyDetails?.beds} beds • ${widget.video.propertyDetails?.baths} baths • ${widget.video.propertyDetails?.squareFeet} sqft',
-                  style: const TextStyle(
-                    color: AppColors.white,
-                    fontSize: AppTheme.fontSize_sm,
+                  const SizedBox(height: 8),
+
+                  // Key Features Row
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildCompactFeatureItem(
+                        Icons.bed,
+                        '${widget.video.propertyDetails!.beds}',
+                        AppColors.save,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCompactFeatureItem(
+                        Icons.bathroom,
+                        '${widget.video.propertyDetails!.baths}',
+                        AppColors.save,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCompactFeatureItem(
+                        Icons.square_foot,
+                        '${widget.video.propertyDetails!.squareFeet}',
+                        AppColors.save,
+                      ),
+                    ],
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -759,6 +768,27 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
           style: const TextStyle(
             color: AppColors.white,
             fontSize: 14,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactFeatureItem(IconData icon, String text, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          color: color,
+          size: 16,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(
+            color: AppColors.white,
+            fontSize: 12,
           ),
         ),
       ],

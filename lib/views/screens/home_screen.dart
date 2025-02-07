@@ -36,56 +36,28 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Obx(() => Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            GestureDetector(
-              onTap: () => videoController.switchTab(true),
-              child: Container(
-                padding: const EdgeInsets.only(bottom: 5),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: videoController.isTrendingSelected.value ? AppColors.white : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                ),
-                child: Text(
-                  'Trending',
-                  style: TextStyle(
-                    color: videoController.isTrendingSelected.value ? AppColors.white : AppColors.grey,
-                    fontSize: videoController.isTrendingSelected.value ? 17 : 15,
-                    fontWeight: videoController.isTrendingSelected.value ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
+        title: Obx(() => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(25),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTabButton(
+                title: 'Trending',
+                isSelected: videoController.isTrendingSelected.value,
+                onTap: () => videoController.switchTab(true),
               ),
-            ),
-            const SizedBox(width: 20),
-            GestureDetector(
-              onTap: () => videoController.switchTab(false),
-              child: Container(
-                padding: const EdgeInsets.only(bottom: 5),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: !videoController.isTrendingSelected.value ? AppColors.white : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                ),
-                child: Text(
-                  'For You',
-                  style: TextStyle(
-                    color: !videoController.isTrendingSelected.value ? AppColors.white : AppColors.grey,
-                    fontSize: !videoController.isTrendingSelected.value ? 17 : 15,
-                    fontWeight: !videoController.isTrendingSelected.value ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
+              const SizedBox(width: 16),
+              _buildTabButton(
+                title: 'For You',
+                isSelected: !videoController.isTrendingSelected.value,
+                onTap: () => videoController.switchTab(false),
               ),
-            ),
-          ],
+            ],
+          ),
         )),
         centerTitle: true,
       ),
@@ -118,6 +90,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? AppColors.buttonText : AppColors.white,
+            fontSize: isSelected ? 16 : 15,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }

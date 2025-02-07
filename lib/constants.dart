@@ -14,10 +14,6 @@ class AppColors {
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);
   static const Color buttonText = Color(0xFF000000); // Black text for buttons
-
-  // Gradient colors for overlays
-  static final Color overlayStart = Colors.black.withOpacity(0.8);
-  static final Color overlayEnd = Colors.transparent;
 }
 
 // Material design constants

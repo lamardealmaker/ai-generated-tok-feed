@@ -21,6 +21,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   void initState() {
     super.initState();
     _loadFavorites();
+    // Ensure main videos are loaded
+    if (videoController.videos.isEmpty) {
+      videoController.loadVideos();
+    }
   }
 
   Future<void> _loadFavorites() async {
@@ -54,7 +58,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.white),
+            icon: const Icon(Icons.refresh, color: AppColors.accent),
             onPressed: _loadFavorites,
           ),
         ],
@@ -63,9 +67,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       body: Obx(
         () {
           if (isLoading.value) {
-            return const Center(
-              child: CircularProgressIndicator(
-                color: AppColors.accent,
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: AppColors.accent,
+                    strokeWidth: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading favorites...',
+                    style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: AppTheme.fontSize_md,
+                    ),
+                  ),
+                ],
               ),
             );
           }
@@ -75,27 +93,47 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.bookmark_border,
-                    color: AppColors.grey,
-                    size: 64,
+                    color: AppColors.accent.withOpacity(0.5),
+                    size: 80,
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'No favorite videos yet',
+                    'No favorite properties yet',
                     style: TextStyle(
                       color: AppColors.white,
                       fontSize: AppTheme.fontSize_lg,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextButton(
+                  Text(
+                    'Save properties to view them later',
+                    style: TextStyle(
+                      color: AppColors.white.withOpacity(0.7),
+                      fontSize: AppTheme.fontSize_md,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.buttonText,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spacing_xl,
+                        vertical: AppTheme.spacing_md,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                     onPressed: () => Get.back(),
                     child: const Text(
-                      'Browse videos',
+                      'Browse Properties',
                       style: TextStyle(
-                        color: AppColors.accent,
                         fontSize: AppTheme.fontSize_md,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -109,26 +147,38 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             color: AppColors.accent,
             backgroundColor: AppColors.darkGrey,
             child: GridView.builder(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(12),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.8,
-                crossAxisSpacing: 2,
-                mainAxisSpacing: 2,
+                crossAxisCount: 2,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
               ),
               itemCount: favoriteVideos.length,
               itemBuilder: (context, index) {
                 final video = favoriteVideos[index];
                 return VideoGridItem(
                   video: video,
-                  onTap: () {
-                    // Find the index of this video in the main video list
+                  onTap: () async {
+                    // If main videos aren't loaded yet, load them
+                    if (videoController.videos.isEmpty) {
+                      await videoController.loadVideos();
+                    }
+                    
                     final mainIndex = videoController.videos
                         .indexWhere((v) => v.id == video.id);
+                    
                     if (mainIndex != -1) {
-                      // Update current index and navigate back to main screen
                       videoController.currentVideoIndex.value = mainIndex;
-                      Get.back();
+                      // Navigate to main screen
+                      Get.offAllNamed('/');
+                    } else {
+                      Get.snackbar(
+                        'Error',
+                        'Could not find video in main feed',
+                        backgroundColor: AppColors.error.withOpacity(0.8),
+                        colorText: AppColors.white,
+                      );
                     }
                   },
                 );
