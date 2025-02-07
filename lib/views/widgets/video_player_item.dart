@@ -199,9 +199,9 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
               IconButton(
                 onPressed: () => videoController.shareVideo(widget.video.id),
                 icon: const Icon(
-                  Icons.share,
-                  color: AppColors.white,
-                  size: 30,
+                  Icons.ios_share_rounded,
+                  color: Colors.white,
+                  size: 26,
                 ),
               ),
               Text(
