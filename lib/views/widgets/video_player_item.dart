@@ -151,77 +151,129 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
         Positioned(
           right: 10,
           bottom: 100,
-          child: Column(
-            children: [
-              // Like Button
-              IconButton(
-                onPressed: () => videoController.likeVideo(widget.video.id),
-                icon: Icon(
-                  Icons.favorite,
-                  color: widget.video.isLiked ? AppColors.accent : AppColors.white,
-                  size: 30,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Column(
+              children: [
+                // Like Button and Count
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () => videoController.likeVideo(widget.video.id),
+                      icon: Obx(() => Icon(
+                        widget.video.isLiked.value ? Icons.favorite : Icons.favorite_border,
+                        color: widget.video.isLiked.value ? Colors.red : AppColors.white,
+                        size: 30,
+                      )),
+                    ),
+                    Text(
+                      widget.video.likes.toString(),
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: AppTheme.fontSize_sm,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Text(
-                widget.video.likes.toString(),
-                style: const TextStyle(color: AppColors.white),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
-              // Comment Button
-              IconButton(
-                onPressed: () {
-                  _showCommentsSheet(context);
-                },
-                icon: const Icon(
-                  Icons.comment,
-                  color: AppColors.white,
-                  size: 30,
+                // Comment Button and Count
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        _showCommentsSheet(context);
+                      },
+                      icon: const Icon(
+                        Icons.comment,
+                        color: AppColors.white,
+                        size: 30,
+                      ),
+                    ),
+                    Text(
+                      widget.video.comments.toString(),
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: AppTheme.fontSize_sm,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Text(
-                widget.video.comments.toString(),
-                style: const TextStyle(color: AppColors.white),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
-              // Favorite Button
-              IconButton(
-                onPressed: () => videoController.toggleFavorite(widget.video.id),
-                icon: Icon(
-                  Icons.bookmark,
-                  color: widget.video.isFavorite ? AppColors.accent : AppColors.white,
-                  size: 30,
+                // Share Button and Count
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () => videoController.shareVideo(widget.video.id),
+                      icon: const Icon(
+                        Icons.share,
+                        color: AppColors.white,
+                        size: 30,
+                      ),
+                    ),
+                    Text(
+                      widget.video.shares.toString(),
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: AppTheme.fontSize_sm,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
-              // Share Button
-              IconButton(
-                onPressed: () => videoController.shareVideo(widget.video.id),
-                icon: const Icon(
-                  Icons.ios_share_rounded,
-                  color: Colors.white,
-                  size: 26,
+                // Property Info Button
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        _showPropertySheet(context);
+                      },
+                      icon: const Icon(
+                        Icons.info_outline,
+                        color: AppColors.white,
+                        size: 30,
+                      ),
+                    ),
+                    const Text(
+                      'Info',
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: AppTheme.fontSize_sm,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Text(
-                widget.video.shares.toString(),
-                style: const TextStyle(color: AppColors.white),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
-              // Property Info Button
-              if (widget.video.propertyDetails != null)
-                IconButton(
-                  onPressed: () => _showPropertySheet(context),
-                  icon: const Icon(
-                    Icons.home_rounded,
-                    color: AppColors.white,
-                    size: 30,
-                  ),
+                // Favorite Button
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () => videoController.toggleFavorite(widget.video.id),
+                      icon: Obx(() => Icon(
+                        widget.video.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
+                        color: widget.video.isFavorite.value ? Colors.blue : AppColors.white,
+                        size: 30,
+                      )),
+                    ),
+                    const Text(
+                      'Save',
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: AppTheme.fontSize_sm,
+                      ),
+                    ),
+                  ],
                 ),
-            ],
+              ],
+            ),
           ),
         ),
       ],

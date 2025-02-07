@@ -3,14 +3,18 @@ import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/video_model.dart';
 import '../models/comment_model.dart';
 import '../constants.dart';
 
 class VideoController extends GetxController {
   final RxList<VideoModel> videos = RxList<VideoModel>([]);
+  final RxList<VideoModel> trendingVideos = RxList<VideoModel>([]);
+  final RxList<VideoModel> forYouVideos = RxList<VideoModel>([]);
   final RxInt currentVideoIndex = 0.obs;
   final RxBool isLoading = false.obs;
+  final RxBool isTrendingSelected = false.obs; // Changed from true to false
   
   // Map to store comments for each video
   final RxMap<String, List<CommentModel>> commentsMap = RxMap<String, List<CommentModel>>({});
@@ -44,45 +48,24 @@ class VideoController extends GetxController {
       // Get videos collection reference
       final videosRef = _firestore.collection('videos');
       
-      // Query videos ordered by creation date
+      // Query all videos ordered by creation date
       final videosSnapshot = await videosRef
           .orderBy('createdAt', descending: true)
           .get();
-
-      print('Found ${videosSnapshot.docs.length} videos in Firestore'); // Debug print
-      
-      // Debug: Print all document data
-      for (var doc in videosSnapshot.docs) {
-        final data = doc.data();
-        print('Video document ${doc.id}:');
-        print('  videoUrl: ${data['videoUrl']}');
-        print('  thumbnailUrl: ${data['thumbnailUrl']}');
-        print('  createdAt: ${data['createdAt']}');
-        print('  title: ${data['title']}');
-      }
 
       final List<VideoModel> loadedVideos = [];
 
       for (var doc in videosSnapshot.docs) {
         try {
           final video = VideoModel.fromFirestore(doc);
-          print('Successfully loaded video: ${video.id}, URL: ${video.videoUrl}'); // Debug print
           
           // Validate video URL format
           try {
             final uri = Uri.parse(video.videoUrl);
-            if (!uri.isAbsolute) {
-              print('Invalid video URL format for ${video.id}: ${video.videoUrl}');
-              continue;
-            }
-            
-            // Check if URL starts with https:// or http://
-            if (!uri.scheme.startsWith('http')) {
-              print('Video URL must start with http:// or https:// for ${video.id}: ${video.videoUrl}');
+            if (!uri.isAbsolute || !uri.scheme.startsWith('http')) {
               continue;
             }
           } catch (e) {
-            print('Error parsing video URL for ${video.id}: $e');
             continue;
           }
           
@@ -94,54 +77,62 @@ class VideoController extends GetxController {
                 .collection('favorites')
                 .doc(video.id)
                 .get();
-            
+            video.isFavorite.value = favoriteDoc.exists;
+
             final likeDoc = await _firestore
                 .collection('videos')
                 .doc(video.id)
                 .collection('likes')
                 .doc(_auth.currentUser!.uid)
                 .get();
-            
-            loadedVideos.add(video.copyWith(
-              isFavorite: favoriteDoc.exists,
-              isLiked: likeDoc.exists,
-            ));
-          } else {
-            loadedVideos.add(video);
+            video.isLiked.value = likeDoc.exists;
           }
+          
+          loadedVideos.add(video);
         } catch (e) {
-          print('Error loading video from doc ${doc.id}: $e'); // Debug print
-          continue; // Skip this video if there's an error
+          print('Error loading video: $e');
+        }
+      }
+
+      // Sort videos by likes for trending
+      trendingVideos.value = List.from(loadedVideos)
+        ..sort((a, b) => b.likes.compareTo(a.likes));
+
+      // For now, randomize the For You feed
+      forYouVideos.value = List.from(loadedVideos)..shuffle();
+      
+      // Set initial videos list based on selected tab
+      videos.value = isTrendingSelected.value ? trendingVideos : forYouVideos;
+
+      if (videos.isNotEmpty) {
+        // Initialize first video immediately
+        await _initializeVideo(0);
+        
+        // Pre-initialize second video if available
+        if (videos.length > 1) {
+          _initializeVideo(1); // Don't await this one
         }
       }
       
-      videos.value = loadedVideos;
-
-      if (videos.isEmpty) {
-        print('No videos found in the database'); // Debug print
-        Get.snackbar(
-          'No Videos',
-          'No real estate videos are currently available.',
-          backgroundColor: Colors.orange,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
-      } else {
-        print('Found ${videos.length} valid videos, initializing first video...'); // Debug print
-        // Initialize first video
-        await _initializeVideo(0);
-      }
+      isLoading.value = false;
     } catch (e) {
       print('Error loading videos: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to load videos. Please check your connection.',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 3),
-      );
-    } finally {
       isLoading.value = false;
+    }
+  }
+
+  void switchTab(bool toTrending) {
+    isTrendingSelected.value = toTrending;
+    videos.value = toTrending ? trendingVideos : forYouVideos;
+    currentVideoIndex.value = 0;  // Reset to first video when switching tabs
+    
+    // Initialize first video of the new tab immediately
+    if (videos.isNotEmpty) {
+      _initializeVideo(0);
+      // Pre-initialize second video if available
+      if (videos.length > 1) {
+        _initializeVideo(1);
+      }
     }
   }
 
@@ -227,30 +218,47 @@ class VideoController extends GetxController {
   }
 
   void onVideoIndexChanged(int index) {
-    if (index < 0 || index >= videos.length) return;
-    
-    print('Video index changed to $index'); // Debug
-    final String videoId = videos[index].id;
-    print('Loading video $videoId'); // Debug
-    
     currentVideoIndex.value = index;
     
-    // Load comments for the current video
-    loadComments(videos[index].id);
-    
-    // Initialize video controllers for current and adjacent videos
+    // Initialize current video if not already initialized
     _initializeVideo(index);
-    if (index > 0) _initializeVideo(index - 1);
-    if (index < videos.length - 1) _initializeVideo(index + 1);
     
-    // Play current video, pause others
-    for (var entry in _videoControllers.entries) {
-      if (entry.key == videoId) {
-        entry.value.play();
-      } else {
-        entry.value.pause();
-      }
+    // Pre-initialize next video if available
+    if (index < videos.length - 1) {
+      _initializeVideo(index + 1);
     }
+    
+    // Clean up videos that are no longer needed
+    _cleanupUnusedControllers(index);
+  }
+
+  void _cleanupUnusedControllers(int currentIndex) {
+    // Keep only controllers for current, previous, and next videos
+    final keysToKeep = <String>{};
+    
+    // Add current video
+    if (currentIndex >= 0 && currentIndex < videos.length) {
+      keysToKeep.add(videos[currentIndex].id);
+    }
+    
+    // Add previous video
+    if (currentIndex > 0) {
+      keysToKeep.add(videos[currentIndex - 1].id);
+    }
+    
+    // Add next video
+    if (currentIndex < videos.length - 1) {
+      keysToKeep.add(videos[currentIndex + 1].id);
+    }
+    
+    // Remove controllers that are no longer needed
+    _videoControllers.removeWhere((key, controller) {
+      if (!keysToKeep.contains(key)) {
+        controller.dispose();
+        return true;
+      }
+      return false;
+    });
   }
 
   VideoPlayerController? getController(String videoId) {
@@ -260,142 +268,100 @@ class VideoController extends GetxController {
   }
 
   Future<void> likeVideo(String videoId) async {
-    if (_auth.currentUser == null) {
-      Get.snackbar(
-        'Error',
-        'Please login to like videos',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
     try {
-      final userLikesRef = _firestore
+      if (_auth.currentUser == null) {
+        Get.snackbar('Error', 'Please sign in to like videos');
+        return;
+      }
+
+      final videoIndex = videos.indexWhere((v) => v.id == videoId);
+      if (videoIndex == -1) return;
+
+      final video = videos[videoIndex];
+      final likeRef = _firestore
           .collection('videos')
           .doc(videoId)
           .collection('likes')
           .doc(_auth.currentUser!.uid);
 
-      final doc = await userLikesRef.get();
-      final batch = _firestore.batch();
-
-      final videoRef = _firestore.collection('videos').doc(videoId);
-      final videoIndex = videos.indexWhere((v) => v.id == videoId);
-
-      if (doc.exists) {
-        // Unlike
-        batch.delete(userLikesRef);
-        batch.update(videoRef, {
-          'likes': FieldValue.increment(-1),
+      if (!video.isLiked.value) {
+        // Add like
+        await likeRef.set({
+          'timestamp': FieldValue.serverTimestamp(),
         });
-
-        if (videoIndex != -1) {
-          videos[videoIndex] = videos[videoIndex].copyWith(
-            likes: videos[videoIndex].likes - 1,
-            isLiked: false,
-          );
-        }
+        video.isLiked.value = true;
       } else {
-        // Like
-        batch.set(userLikesRef, {
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        batch.update(videoRef, {
-          'likes': FieldValue.increment(1),
-        });
-
-        if (videoIndex != -1) {
-          videos[videoIndex] = videos[videoIndex].copyWith(
-            likes: videos[videoIndex].likes + 1,
-            isLiked: true,
-          );
-        }
+        // Remove like
+        await likeRef.delete();
+        video.isLiked.value = false;
       }
-
-      await batch.commit();
     } catch (e) {
-      print('Error liking video: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to like video',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      print('Error toggling like: $e');
     }
   }
 
   Future<void> toggleFavorite(String videoId) async {
-    if (_auth.currentUser == null) {
-      Get.snackbar(
-        'Error',
-        'Please login to favorite videos',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
-    }
-
     try {
-      final userFavoritesRef = _firestore
+      if (_auth.currentUser == null) {
+        Get.snackbar('Error', 'Please sign in to favorite videos');
+        return;
+      }
+
+      final videoIndex = videos.indexWhere((v) => v.id == videoId);
+      if (videoIndex == -1) return;
+
+      final video = videos[videoIndex];
+      final favoriteRef = _firestore
           .collection('users')
           .doc(_auth.currentUser!.uid)
           .collection('favorites')
           .doc(videoId);
 
-      final favoriteDoc = await userFavoritesRef.get();
-      
-      if (!favoriteDoc.exists) {
+      if (!video.isFavorite.value) {
         // Add to favorites
-        await userFavoritesRef.set({
+        await favoriteRef.set({
           'timestamp': FieldValue.serverTimestamp(),
         });
-        
-        // Update local state
-        final index = videos.indexWhere((v) => v.id == videoId);
-        if (index != -1) {
-          videos[index] = videos[index].copyWith(isFavorite: true);
-        }
+        video.isFavorite.value = true;
       } else {
         // Remove from favorites
-        await userFavoritesRef.delete();
-        
-        // Update local state
-        final index = videos.indexWhere((v) => v.id == videoId);
-        if (index != -1) {
-          videos[index] = videos[index].copyWith(isFavorite: false);
-        }
+        await favoriteRef.delete();
+        video.isFavorite.value = false;
       }
     } catch (e) {
       print('Error toggling favorite: $e');
-      Get.snackbar(
-        'Error',
-        'Failed to update favorites',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
     }
   }
 
   Future<void> shareVideo(String videoId) async {
     try {
-      final videoRef = _firestore.collection('videos').doc(videoId);
+      final video = videos.firstWhere((v) => v.id == videoId);
+      final property = video.propertyDetails;
       
-      await videoRef.update({
-        'shares': FieldValue.increment(1),
+      if (property == null) return;
+
+      final shareText = '''
+Check out this property!
+${property.fullAddress}
+Price: ${property.formattedPrice}
+${property.beds} beds, ${property.baths} baths
+${property.squareFeet} sq ft
+''';
+
+      Share.share(shareText);
+      
+      // Update share count in Firestore
+      await _firestore.collection('videos').doc(videoId).update({
+        'shares': FieldValue.increment(1)
       });
 
+      // Update local state
       final index = videos.indexWhere((v) => v.id == videoId);
       if (index != -1) {
-        videos[index] = videos[index].copyWith(shares: videos[index].shares + 1);
+        videos[index] = videos[index].copyWith(
+          shares: videos[index].shares + 1
+        );
       }
-
-      Get.snackbar(
-        'Share',
-        'Sharing ${videos[index].title}...',
-        backgroundColor: Colors.blue.withOpacity(0.8),
-        colorText: Colors.white,
-      );
     } catch (e) {
       print('Error sharing video: $e');
       Get.snackbar(

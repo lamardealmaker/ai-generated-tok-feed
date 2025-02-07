@@ -13,7 +13,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final VideoController videoController = Get.put(VideoController());
-  bool _isTrendingSelected = true;
   late PageController _pageController;
   bool _isPageChanging = false;
 
@@ -29,12 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _switchTab(bool isTrending) {
-    setState(() {
-      _isTrendingSelected = isTrending;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,18 +36,18 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Row(
+        title: Obx(() => Row(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             GestureDetector(
-              onTap: () => _switchTab(true),
+              onTap: () => videoController.switchTab(true),
               child: Container(
                 padding: const EdgeInsets.only(bottom: 5),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: _isTrendingSelected ? AppColors.white : Colors.transparent,
+                      color: videoController.isTrendingSelected.value ? AppColors.white : Colors.transparent,
                       width: 2,
                     ),
                   ),
@@ -62,22 +55,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   'Trending',
                   style: TextStyle(
-                    color: _isTrendingSelected ? AppColors.white : AppColors.grey,
-                    fontSize: _isTrendingSelected ? 17 : 15,
-                    fontWeight: _isTrendingSelected ? FontWeight.bold : FontWeight.normal,
+                    color: videoController.isTrendingSelected.value ? AppColors.white : AppColors.grey,
+                    fontSize: videoController.isTrendingSelected.value ? 17 : 15,
+                    fontWeight: videoController.isTrendingSelected.value ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ),
             ),
             const SizedBox(width: 20),
             GestureDetector(
-              onTap: () => _switchTab(false),
+              onTap: () => videoController.switchTab(false),
               child: Container(
                 padding: const EdgeInsets.only(bottom: 5),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: !_isTrendingSelected ? AppColors.white : Colors.transparent,
+                      color: !videoController.isTrendingSelected.value ? AppColors.white : Colors.transparent,
                       width: 2,
                     ),
                   ),
@@ -85,15 +78,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Text(
                   'For You',
                   style: TextStyle(
-                    color: !_isTrendingSelected ? AppColors.white : AppColors.grey,
-                    fontSize: !_isTrendingSelected ? 17 : 15,
-                    fontWeight: !_isTrendingSelected ? FontWeight.bold : FontWeight.normal,
+                    color: !videoController.isTrendingSelected.value ? AppColors.white : AppColors.grey,
+                    fontSize: !videoController.isTrendingSelected.value ? 17 : 15,
+                    fontWeight: !videoController.isTrendingSelected.value ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ),
             ),
           ],
-        ),
+        )),
         centerTitle: true,
       ),
       body: Obx(

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
 import 'property_details.dart';
 
 class VideoModel {
@@ -11,8 +12,8 @@ class VideoModel {
   final int likes;
   final int comments;
   final int shares;
-  final bool isFavorite;
-  final bool isLiked;
+  final RxBool isFavorite;
+  final RxBool isLiked;
   final DateTime createdAt;
   final PropertyDetails? propertyDetails;
 
@@ -26,11 +27,12 @@ class VideoModel {
     this.likes = 0,
     this.comments = 0,
     this.shares = 0,
-    this.isFavorite = false,
-    this.isLiked = false,
+    bool isFavorite = false,
+    bool isLiked = false,
     required this.createdAt,
     this.propertyDetails,
-  }) {
+  }) : isFavorite = isFavorite.obs,
+       isLiked = isLiked.obs {
     // Validate video URL
     if (videoUrl.isEmpty) {
       throw ArgumentError('Video URL cannot be empty');
@@ -65,8 +67,8 @@ class VideoModel {
       likes: likes ?? this.likes,
       comments: comments ?? this.comments,
       shares: shares ?? this.shares,
-      isFavorite: isFavorite ?? this.isFavorite,
-      isLiked: isLiked ?? this.isLiked,
+      isFavorite: isFavorite ?? this.isFavorite.value,
+      isLiked: isLiked ?? this.isLiked.value,
       createdAt: createdAt ?? this.createdAt,
       propertyDetails: propertyDetails ?? this.propertyDetails,
     );
@@ -83,8 +85,8 @@ class VideoModel {
       'likes': likes,
       'comments': comments,
       'shares': shares,
-      'isFavorite': isFavorite,
-      'isLiked': isLiked,
+      'isFavorite': isFavorite.value,
+      'isLiked': isLiked.value,
       'createdAt': createdAt.toIso8601String(),
       'propertyDetails': propertyDetails?.toMap(),
       'status': 'active',
