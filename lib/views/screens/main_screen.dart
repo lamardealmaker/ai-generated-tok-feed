@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../controllers/video_controller.dart';
 import '../../constants.dart';
 import 'home_screen.dart';
 import 'favorites_screen.dart';

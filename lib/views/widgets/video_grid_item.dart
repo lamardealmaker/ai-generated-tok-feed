@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../constants.dart';
 import '../../models/video_model.dart';
+import '../../models/property_details.dart';
+import '../../constants.dart';
 
 class VideoGridItem extends StatelessWidget {
   final VideoModel video;
@@ -16,84 +17,64 @@ class VideoGridItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Thumbnail
-          Image.network(
-            video.thumbnailUrl,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(8),
+          image: DecorationImage(
+            image: NetworkImage(video.thumbnailUrl),
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                color: AppColors.darkGrey,
-                child: const Icon(
-                  Icons.error_outline,
-                  color: AppColors.white,
-                ),
-              );
-            },
           ),
-
-          // Gradient overlay
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.7),
-                ],
-              ),
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.transparent,
+                Colors.black.withOpacity(0.7),
+              ],
             ),
           ),
-
-          // Video info
-          Positioned(
-            left: 8,
-            right: 8,
-            bottom: 8,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (video.propertyDetails != null) ...[
                 Text(
-                  video.propertyDetails['price'] ?? '',
+                  video.propertyDetails!.formattedPrice,
                   style: const TextStyle(
                     color: AppColors.white,
-                    fontSize: AppTheme.fontSize_sm,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  video.propertyDetails['location'] ?? '',
+                  video.propertyDetails!.fullAddress,
                   style: const TextStyle(
                     color: AppColors.white,
-                    fontSize: AppTheme.fontSize_xs,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${video.propertyDetails!.beds} beds • ${video.propertyDetails!.baths} baths • ${video.propertyDetails!.squareFeet} sqft',
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 12,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
-            ),
+            ],
           ),
-
-          // Play icon overlay
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.play_arrow,
-                color: AppColors.white,
-                size: 24,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../models/video_model.dart';
 import '../../controllers/video_controller.dart';
 import '../../models/comment_model.dart';
+import '../../models/property_details.dart';
 import '../../constants.dart';
 
 class VideoPlayerItem extends StatefulWidget {
@@ -128,14 +129,14 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${widget.video.propertyDetails['price']} • ${widget.video.propertyDetails['location']}',
+                  '${widget.video.propertyDetails?.formattedPrice} • ${widget.video.propertyDetails?.city}, ${widget.video.propertyDetails?.state}',
                   style: const TextStyle(
                     color: AppColors.white,
                     fontSize: AppTheme.fontSize_md,
                   ),
                 ),
                 Text(
-                  '${widget.video.propertyDetails['bedrooms']} beds • ${widget.video.propertyDetails['bathrooms']} baths • ${widget.video.propertyDetails['sqft']} sqft',
+                  '${widget.video.propertyDetails?.beds} beds • ${widget.video.propertyDetails?.baths} baths • ${widget.video.propertyDetails?.squareFeet} sqft',
                   style: const TextStyle(
                     color: AppColors.white,
                     fontSize: AppTheme.fontSize_sm,
@@ -208,6 +209,18 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                 widget.video.shares.toString(),
                 style: const TextStyle(color: AppColors.white),
               ),
+              const SizedBox(height: 20),
+
+              // Property Info Button
+              if (widget.video.propertyDetails != null)
+                IconButton(
+                  onPressed: () => _showPropertySheet(context),
+                  icon: const Icon(
+                    Icons.home_rounded,
+                    color: AppColors.white,
+                    size: 30,
+                  ),
+                ),
             ],
           ),
         ),
@@ -465,6 +478,243 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showPropertySheet(BuildContext context) {
+    if (widget.video.propertyDetails == null) return;
+    
+    final property = widget.video.propertyDetails!;  // Safe to use ! after null check
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.black,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle and title
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey[900]!,
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      height: 4,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[600],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Title
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Property Details',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            
+            // Property content
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    // Address and Price
+                    Text(
+                      property.fullAddress,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      property.formattedPrice,
+                      style: TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Property Stats
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStat(
+                          property.beds.toString(),
+                          'Beds',
+                          Icons.bed,
+                        ),
+                        _buildStat(
+                          property.baths.toString(),
+                          'Baths',
+                          Icons.bathtub_outlined,
+                        ),
+                        _buildStat(
+                          '${property.squareFeet}',
+                          'Sq Ft',
+                          Icons.square_foot,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Description
+                    const Text(
+                      'Description',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      property.description,
+                      style: TextStyle(
+                        color: Colors.grey[300],
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Features
+                    if (property.features.isNotEmpty) ...[
+                      const Text(
+                        'Features',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...property.features.map((feature) => 
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: AppColors.accent,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                feature,
+                                style: TextStyle(
+                                  color: Colors.grey[300],
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                    
+                    // Listed By
+                    const Text(
+                      'Listed By',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      property.agentName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      property.agencyName,
+                      style: TextStyle(
+                        color: Colors.grey[300],
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStat(String value, String label, IconData icon) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: AppColors.white,
+          size: 24,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey[400],
+            fontSize: 14,
+          ),
+        ),
+      ],
     );
   }
 

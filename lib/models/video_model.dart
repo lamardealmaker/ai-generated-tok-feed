@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'property_details.dart';
 
 class VideoModel {
   final String id;
@@ -13,7 +14,7 @@ class VideoModel {
   final bool isFavorite;
   final bool isLiked;
   final DateTime createdAt;
-  final Map<String, dynamic> propertyDetails;
+  final PropertyDetails? propertyDetails;
 
   VideoModel({
     required this.id,
@@ -28,7 +29,7 @@ class VideoModel {
     this.isFavorite = false,
     this.isLiked = false,
     required this.createdAt,
-    required this.propertyDetails,
+    this.propertyDetails,
   }) {
     // Validate video URL
     if (videoUrl.isEmpty) {
@@ -52,7 +53,7 @@ class VideoModel {
     bool? isFavorite,
     bool? isLiked,
     DateTime? createdAt,
-    Map<String, dynamic>? propertyDetails,
+    PropertyDetails? propertyDetails,
   }) {
     return VideoModel(
       id: id ?? this.id,
@@ -85,8 +86,8 @@ class VideoModel {
       'isFavorite': isFavorite,
       'isLiked': isLiked,
       'createdAt': createdAt.toIso8601String(),
-      'propertyDetails': propertyDetails,
-      'status': 'active', // Add status field
+      'propertyDetails': propertyDetails?.toMap(),
+      'status': 'active',
     };
   }
 
@@ -108,7 +109,7 @@ class VideoModel {
       isFavorite: json['isFavorite'],
       isLiked: json['isLiked'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
-      propertyDetails: json['propertyDetails'],
+      propertyDetails: json['propertyDetails'] != null ? PropertyDetails.fromMap(json['propertyDetails']) : null,
     );
   }
 
@@ -146,7 +147,7 @@ class VideoModel {
         isFavorite: data['isFavorite'] ?? false,
         isLiked: data['isLiked'] ?? false,
         createdAt: createdAt,
-        propertyDetails: Map<String, dynamic>.from(data['propertyDetails'] ?? {}),
+        propertyDetails: data['propertyDetails'] != null ? PropertyDetails.fromMap(data['propertyDetails']) : null,
       );
     } catch (e) {
       print('Error creating VideoModel from document ${doc.id}: $e');
