@@ -11,6 +11,7 @@ class VideoModel {
   final int comments;
   final int shares;
   final bool isFavorite;
+  final bool isLiked;
   final DateTime createdAt;
   final Map<String, dynamic> propertyDetails;
 
@@ -25,6 +26,7 @@ class VideoModel {
     this.comments = 0,
     this.shares = 0,
     this.isFavorite = false,
+    this.isLiked = false,
     required this.createdAt,
     required this.propertyDetails,
   }) {
@@ -48,6 +50,7 @@ class VideoModel {
     int? comments,
     int? shares,
     bool? isFavorite,
+    bool? isLiked,
     DateTime? createdAt,
     Map<String, dynamic>? propertyDetails,
   }) {
@@ -62,6 +65,7 @@ class VideoModel {
       comments: comments ?? this.comments,
       shares: shares ?? this.shares,
       isFavorite: isFavorite ?? this.isFavorite,
+      isLiked: isLiked ?? this.isLiked,
       createdAt: createdAt ?? this.createdAt,
       propertyDetails: propertyDetails ?? this.propertyDetails,
     );
@@ -79,6 +83,7 @@ class VideoModel {
       'comments': comments,
       'shares': shares,
       'isFavorite': isFavorite,
+      'isLiked': isLiked,
       'createdAt': createdAt.toIso8601String(),
       'propertyDetails': propertyDetails,
       'status': 'active', // Add status field
@@ -101,6 +106,7 @@ class VideoModel {
       comments: json['comments'],
       shares: json['shares'],
       isFavorite: json['isFavorite'],
+      isLiked: json['isLiked'] ?? false,
       createdAt: DateTime.parse(json['createdAt']),
       propertyDetails: json['propertyDetails'],
     );
@@ -138,6 +144,7 @@ class VideoModel {
         comments: (data['comments'] ?? 0).toInt(),
         shares: (data['shares'] ?? 0).toInt(),
         isFavorite: data['isFavorite'] ?? false,
+        isLiked: data['isLiked'] ?? false,
         createdAt: createdAt,
         propertyDetails: Map<String, dynamic>.from(data['propertyDetails'] ?? {}),
       );

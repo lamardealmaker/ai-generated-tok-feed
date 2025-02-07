@@ -71,6 +71,11 @@ class AuthController extends GetxController {
         password: password,
       );
 
+      // Update display name if username is provided
+      if (username != null) {
+        await cred.user!.updateDisplayName(username);
+      }
+
       // Send email verification
       await cred.user!.sendEmailVerification();
 

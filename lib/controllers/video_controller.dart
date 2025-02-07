@@ -11,7 +11,9 @@ class VideoController extends GetxController {
   final RxList<VideoModel> videos = RxList<VideoModel>([]);
   final RxInt currentVideoIndex = 0.obs;
   final RxBool isLoading = false.obs;
-  final RxList<CommentModel> comments = <CommentModel>[].obs;
+  
+  // Map to store comments for each video
+  final RxMap<String, List<CommentModel>> commentsMap = RxMap<String, List<CommentModel>>({});
   
   // Firebase instances
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -84,7 +86,7 @@ class VideoController extends GetxController {
             continue;
           }
           
-          // Get favorite status for current user
+          // Get favorite and like status for current user
           if (_auth.currentUser != null) {
             final favoriteDoc = await _firestore
                 .collection('users')
@@ -93,11 +95,17 @@ class VideoController extends GetxController {
                 .doc(video.id)
                 .get();
             
-            if (favoriteDoc.exists) {
-              loadedVideos.add(video.copyWith(isFavorite: true));
-            } else {
-              loadedVideos.add(video);
-            }
+            final likeDoc = await _firestore
+                .collection('videos')
+                .doc(video.id)
+                .collection('likes')
+                .doc(_auth.currentUser!.uid)
+                .get();
+            
+            loadedVideos.add(video.copyWith(
+              isFavorite: favoriteDoc.exists,
+              isLiked: likeDoc.exists,
+            ));
           } else {
             loadedVideos.add(video);
           }
@@ -218,37 +226,30 @@ class VideoController extends GetxController {
     }
   }
 
-  Future<void> onVideoIndexChanged(int index) async {
-    if (index >= videos.length) return;
-
-    if (currentVideoIndex.value != index && currentVideoIndex.value < videos.length) {
-      final previousVideo = videos[currentVideoIndex.value];
-      final previousController = _videoControllers[previousVideo.id];
-      if (previousController != null) {
-        print('Pausing previous video ${previousVideo.id}'); // Debug print
-        await previousController.pause();
-      }
-    }
-
+  void onVideoIndexChanged(int index) {
+    if (index < 0 || index >= videos.length) return;
+    
+    print('Video index changed to $index'); // Debug
+    final String videoId = videos[index].id;
+    print('Loading video $videoId'); // Debug
+    
     currentVideoIndex.value = index;
-    print('Video index changed to $index'); // Debug print
-
-    if (!_videoControllers.containsKey(videos[index].id)) {
-      print('Initializing new video at index $index'); // Debug print
-      await _initializeVideo(index);
-    } else {
-      final currentVideo = videos[index];
-      final currentController = _videoControllers[currentVideo.id];
-      if (currentController != null) {
-        print('Playing existing video ${currentVideo.id}'); // Debug print
-        await currentController.play();
+    
+    // Load comments for the current video
+    loadComments(videos[index].id);
+    
+    // Initialize video controllers for current and adjacent videos
+    _initializeVideo(index);
+    if (index > 0) _initializeVideo(index - 1);
+    if (index < videos.length - 1) _initializeVideo(index + 1);
+    
+    // Play current video, pause others
+    for (var entry in _videoControllers.entries) {
+      if (entry.key == videoId) {
+        entry.value.play();
+      } else {
+        entry.value.pause();
       }
-    }
-
-    // Preload next video if available
-    if (index + 1 < videos.length) {
-      print('Preloading next video at index ${index + 1}'); // Debug print
-      _initializeVideo(index + 1);
     }
   }
 
@@ -270,50 +271,51 @@ class VideoController extends GetxController {
     }
 
     try {
-      final videoRef = _firestore.collection('videos').doc(videoId);
       final userLikesRef = _firestore
-          .collection('users')
-          .doc(_auth.currentUser!.uid)
+          .collection('videos')
+          .doc(videoId)
           .collection('likes')
-          .doc(videoId);
+          .doc(_auth.currentUser!.uid);
 
-      final likeDoc = await userLikesRef.get();
-      
-      await _firestore.runTransaction((transaction) async {
-        final videoSnapshot = await transaction.get(videoRef);
-        
-        if (!likeDoc.exists) {
-          // Add like
-          transaction.set(userLikesRef, {
-            'timestamp': FieldValue.serverTimestamp(),
-          });
-          
-          transaction.update(videoRef, {
-            'likes': (videoSnapshot.data()?['likes'] ?? 0) + 1,
-          });
-          
-          // Update local state
-          final index = videos.indexWhere((v) => v.id == videoId);
-          if (index != -1) {
-            videos[index] = videos[index].copyWith(likes: videos[index].likes + 1);
-          }
-        } else {
-          // Remove like
-          transaction.delete(userLikesRef);
-          
-          transaction.update(videoRef, {
-            'likes': (videoSnapshot.data()?['likes'] ?? 1) - 1,
-          });
-          
-          // Update local state
-          final index = videos.indexWhere((v) => v.id == videoId);
-          if (index != -1) {
-            videos[index] = videos[index].copyWith(likes: videos[index].likes - 1);
-          }
+      final doc = await userLikesRef.get();
+      final batch = _firestore.batch();
+
+      final videoRef = _firestore.collection('videos').doc(videoId);
+      final videoIndex = videos.indexWhere((v) => v.id == videoId);
+
+      if (doc.exists) {
+        // Unlike
+        batch.delete(userLikesRef);
+        batch.update(videoRef, {
+          'likes': FieldValue.increment(-1),
+        });
+
+        if (videoIndex != -1) {
+          videos[videoIndex] = videos[videoIndex].copyWith(
+            likes: videos[videoIndex].likes - 1,
+            isLiked: false,
+          );
         }
-      });
+      } else {
+        // Like
+        batch.set(userLikesRef, {
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        batch.update(videoRef, {
+          'likes': FieldValue.increment(1),
+        });
+
+        if (videoIndex != -1) {
+          videos[videoIndex] = videos[videoIndex].copyWith(
+            likes: videos[videoIndex].likes + 1,
+            isLiked: true,
+          );
+        }
+      }
+
+      await batch.commit();
     } catch (e) {
-      print('Error toggling like: $e');
+      print('Error liking video: $e');
       Get.snackbar(
         'Error',
         'Failed to like video',
@@ -405,20 +407,28 @@ class VideoController extends GetxController {
     }
   }
 
+  Stream<List<CommentModel>> getCommentsStream(String videoId) {
+    return _firestore
+        .collection('videos')
+        .doc(videoId)
+        .collection('comments')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          print('Received comment snapshot for video $videoId with ${snapshot.docs.length} comments'); // Debug
+          return snapshot.docs.map((doc) => CommentModel.fromFirestore(doc)).toList();
+        });
+  }
+
   Future<void> loadComments(String videoId) async {
     try {
-      final commentsSnapshot = await _firestore
-          .collection('videos')
-          .doc(videoId)
-          .collection('comments')
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      comments.value = commentsSnapshot.docs
-          .map((doc) => CommentModel.fromFirestore(doc))
-          .toList();
+      print('Loading comments for video $videoId'); // Debug
+      if (!commentsMap.containsKey(videoId)) {
+        commentsMap[videoId] = [];
+      }
     } catch (e) {
       print('Error loading comments: $e');
+      commentsMap[videoId] = [];
     }
   }
 
@@ -435,37 +445,39 @@ class VideoController extends GetxController {
 
     try {
       final user = _auth.currentUser!;
+      
+      // Get the current user's data from Firestore
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      final username = userData != null ? userData['username'] as String? ?? user.displayName : user.displayName;
+      
       final commentRef = _firestore
           .collection('videos')
           .doc(videoId)
           .collection('comments')
           .doc();
 
+      final timestamp = Timestamp.now();
+
       final comment = CommentModel(
         id: commentRef.id,
         videoId: videoId,
         userId: user.uid,
-        username: user.displayName ?? 'Anonymous',
+        username: username ?? 'Anonymous',
         text: text,
-        createdAt: DateTime.now(),
+        createdAt: timestamp,
         likes: 0,
+        parentId: null,
       );
 
-      await commentRef.set(comment.toJson());
-
-      // Update comment count
-      await _firestore.collection('videos').doc(videoId).update({
+      // Use a batch to update both the comment and the count
+      final batch = _firestore.batch();
+      batch.set(commentRef, comment.toJson());
+      batch.update(_firestore.collection('videos').doc(videoId), {
         'comments': FieldValue.increment(1),
       });
-
-      // Update local state
-      comments.insert(0, comment);
-      final videoIndex = videos.indexWhere((v) => v.id == videoId);
-      if (videoIndex != -1) {
-        videos[videoIndex] = videos[videoIndex].copyWith(
-          comments: videos[videoIndex].comments + 1,
-        );
-      }
+      
+      await batch.commit();
     } catch (e) {
       print('Error adding comment: $e');
       Get.snackbar(

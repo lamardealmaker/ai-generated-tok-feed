@@ -3,6 +3,7 @@ import 'package:video_player/video_player.dart';
 import 'package:get/get.dart';
 import '../../models/video_model.dart';
 import '../../controllers/video_controller.dart';
+import '../../models/comment_model.dart';
 import '../../constants.dart';
 
 class VideoPlayerItem extends StatefulWidget {
@@ -156,7 +157,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                 onPressed: () => videoController.likeVideo(widget.video.id),
                 icon: Icon(
                   Icons.favorite,
-                  color: widget.video.likes > 0 ? AppColors.accent : AppColors.white,
+                  color: widget.video.isLiked ? AppColors.accent : AppColors.white,
                   size: 30,
                 ),
               ),
@@ -216,112 +217,255 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
 
   void _showCommentsSheet(BuildContext context) {
     final TextEditingController commentController = TextEditingController();
-
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.black,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.2,
-        maxChildSize: 0.8,
-        builder: (_, controller) => Column(
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
           children: [
+            // Handle and title
             Container(
-              height: 4,
-              width: 40,
-              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
               decoration: BoxDecoration(
-                color: AppColors.grey,
-                borderRadius: BorderRadius.circular(2),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.grey[900]!,
+                    width: 0.5,
+                  ),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    height: 4,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[600],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Comments',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
+            
+            // Comments list
             Expanded(
-              child: Obx(() {
-                videoController.loadComments(widget.video.id);
-                return ListView.builder(
-                  controller: controller,
-                  itemCount: videoController.comments.length,
-                  itemBuilder: (context, index) {
-                    final comment = videoController.comments[index];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: AppColors.accent,
-                        child: Icon(Icons.person, color: AppColors.white),
-                      ),
-                      title: Text(
-                        comment.username,
-                        style: const TextStyle(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.bold,
+              child: StreamBuilder<List<CommentModel>>(
+                stream: videoController.getCommentsStream(widget.video.id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.accent,
                         ),
                       ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            comment.text,
-                            style: const TextStyle(color: AppColors.white),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _getTimeAgo(comment.createdAt),
-                            style: TextStyle(
-                              color: AppColors.grey,
-                              fontSize: AppTheme.fontSize_xs,
-                            ),
-                          ),
-                        ],
+                    );
+                  }
+                  
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Error loading comments',
+                        style: TextStyle(color: Colors.grey[600]),
                       ),
-                      trailing: Column(
+                    );
+                  }
+                  
+                  final comments = snapshot.data ?? [];
+                  
+                  if (comments.isEmpty) {
+                    return Center(
+                      child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.favorite,
-                            color: comment.likes > 0 ? AppColors.accent : AppColors.grey,
-                            size: 16,
+                            Icons.chat_bubble_outline,
+                            color: Colors.grey[600],
+                            size: 40,
                           ),
+                          const SizedBox(height: 8),
                           Text(
-                            comment.likes.toString(),
+                            'No comments yet\nBe the first to comment!',
+                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: AppColors.grey,
-                              fontSize: AppTheme.fontSize_xs,
+                              color: Colors.grey[600],
+                              fontSize: 14,
                             ),
                           ),
                         ],
                       ),
                     );
-                  },
-                );
-              }),
+                  }
+                  
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: comments.length,
+                    itemBuilder: (context, index) {
+                      final comment = comments[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 16,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Avatar
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: AppColors.accent,
+                              child: Text(
+                                comment.username[0].toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            
+                            // Comment content
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    comment.username,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    comment.text,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _getTimeAgo(comment.createdAtDate),
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            
+                            // Like button
+                            Column(
+                              children: [
+                                IconButton(
+                                  onPressed: () {
+                                    // TODO: Implement like functionality
+                                  },
+                                  icon: Icon(
+                                    Icons.favorite_border,
+                                    color: Colors.grey[600],
+                                    size: 20,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 20,
+                                    minHeight: 20,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                ),
+                                Text(
+                                  comment.likes.toString(),
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-            Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16,
-                right: 16,
-                top: 8,
+            
+            // Comment input
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                border: Border(
+                  top: BorderSide(
+                    color: Colors.grey[800]!,
+                    width: 0.5,
+                  ),
+                ),
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: commentController,
-                      style: const TextStyle(color: AppColors.white),
+                      style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: 'Add a comment...',
-                        hintStyle: TextStyle(color: AppColors.grey),
+                        hintStyle: TextStyle(color: Colors.grey[600]),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
                         filled: true,
-                        fillColor: AppColors.darkGrey,
+                        fillColor: Colors.grey[850],
                       ),
+                      maxLines: null,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (text) {
+                        if (text.isNotEmpty) {
+                          videoController.addComment(
+                            widget.video.id,
+                            text,
+                          );
+                          commentController.clear();
+                          FocusScope.of(context).unfocus();
+                        }
+                      },
                     ),
                   ),
+                  const SizedBox(width: 8),
                   IconButton(
                     onPressed: () {
                       if (commentController.text.isNotEmpty) {
@@ -333,7 +477,15 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                         FocusScope.of(context).unfocus();
                       }
                     },
-                    icon: const Icon(Icons.send, color: AppColors.accent),
+                    icon: const Icon(
+                      Icons.send_rounded,
+                      color: AppColors.accent,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                    ),
+                    padding: EdgeInsets.zero,
                   ),
                 ],
               ),
