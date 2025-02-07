@@ -84,6 +84,26 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                 ),
               ),
 
+        // Top gradient overlay
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 100,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.overlayStart,
+                  AppColors.overlayEnd,
+                ],
+              ),
+            ),
+          ),
+        ),
+
         // Video Controls
         GestureDetector(
           onTap: () {
@@ -163,7 +183,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                       onPressed: () => videoController.likeVideo(widget.video.id),
                       icon: Obx(() => Icon(
                         widget.video.isLiked.value ? Icons.favorite : Icons.favorite_border,
-                        color: widget.video.isLiked.value ? Colors.red : AppColors.white,
+                        color: widget.video.isLiked.value ? AppColors.heart : AppColors.white,
                         size: 30,
                       )),
                     ),
@@ -259,7 +279,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                       onPressed: () => videoController.toggleFavorite(widget.video.id),
                       icon: Obx(() => Icon(
                         widget.video.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
-                        color: widget.video.isFavorite.value ? Colors.blue : AppColors.white,
+                        color: widget.video.isFavorite.value ? AppColors.save : AppColors.white,
                         size: 30,
                       )),
                     ),
@@ -534,235 +554,210 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   }
 
   void _showPropertySheet(BuildContext context) {
-    if (widget.video.propertyDetails == null) return;
-    
-    final property = widget.video.propertyDetails!;  // Safe to use ! after null check
-    
+    final property = widget.video.propertyDetails;
+    if (property == null) return;
+
     showModalBottomSheet(
       context: context,
+      backgroundColor: AppColors.background,
       isScrollControlled: true,
-      backgroundColor: Colors.black,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle and title
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey[900]!,
-                    width: 0.5,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (context, scrollController) => SingleChildScrollView(
+          controller: scrollController,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Price Section
+                Text(
+                  property.formattedPrice,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.accent,
                   ),
                 ),
-              ),
-              child: Column(
-                children: [
-                  // Drag handle
-                  Center(
-                    child: Container(
-                      height: 4,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[600],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+                const SizedBox(height: 8),
+
+                // Address
+                Text(
+                  property.fullAddress,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    color: AppColors.white,
                   ),
-                  const SizedBox(height: 16),
-                  // Title
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Property Details',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            
-            // Property content
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                const SizedBox(height: 20),
+
+                // Key Features Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    const SizedBox(height: 20),
-                    // Address and Price
-                    Text(
-                      property.fullAddress,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    _buildFeatureItem(
+                      Icons.bed,
+                      '${property.beds} beds',
+                      AppColors.save,
+                    ),
+                    _buildFeatureItem(
+                      Icons.bathroom,
+                      '${property.baths} baths',
+                      AppColors.save,
+                    ),
+                    _buildFeatureItem(
+                      Icons.square_foot,
+                      '${property.squareFeet} sq ft',
+                      AppColors.save,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Description Section
+                _buildSectionHeader('Description'),
+                const SizedBox(height: 8),
+                Text(
+                  property.description,
+                  style: const TextStyle(
+                    color: AppColors.white,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Features Section
+                _buildSectionHeader('Features'),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: property.features.map((feature) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColors.accent.withOpacity(0.3),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      property.formattedPrice,
+                    child: Text(
+                      feature,
                       style: TextStyle(
                         color: AppColors.accent,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Property Stats
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStat(
-                          property.beds.toString(),
-                          'Beds',
-                          Icons.bed,
-                        ),
-                        _buildStat(
-                          property.baths.toString(),
-                          'Baths',
-                          Icons.bathtub_outlined,
-                        ),
-                        _buildStat(
-                          '${property.squareFeet}',
-                          'Sq Ft',
-                          Icons.square_foot,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Description
-                    const Text(
-                      'Description',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      property.description,
-                      style: TextStyle(
-                        color: Colors.grey[300],
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Features
-                    if (property.features.isNotEmpty) ...[
-                      const Text(
-                        'Features',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ...property.features.map((feature) => 
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: AppColors.accent,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                feature,
-                                style: TextStyle(
-                                  color: Colors.grey[300],
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                    
-                    // Listed By
-                    const Text(
-                      'Listed By',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      property.agentName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      property.agencyName,
-                      style: TextStyle(
-                        color: Colors.grey[300],
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 40),
+                  )).toList(),
+                ),
+                const SizedBox(height: 24),
+
+                // Agent Section
+                _buildSectionHeader('Listed By'),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          property.agentName,
+                          style: const TextStyle(
+                            color: AppColors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          property.agencyName,
+                          style: TextStyle(
+                            color: AppColors.white.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 24),
+
+                // Contact Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.buttonText,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      // Handle contact agent
+                    },
+                    child: const Text(
+                      'Contact Agent',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStat(String value, String label, IconData icon) {
+  Widget _buildSectionHeader(String title) {
+    return Container(
+      padding: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: AppColors.accent.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+      ),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: AppColors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(IconData icon, String text, Color color) {
     return Column(
       children: [
         Icon(
           icon,
-          color: AppColors.white,
-          size: 24,
+          color: color,
+          size: 28,
         ),
         const SizedBox(height: 4),
         Text(
-          value,
+          text,
           style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[400],
+            color: AppColors.white,
             fontSize: 14,
           ),
         ),

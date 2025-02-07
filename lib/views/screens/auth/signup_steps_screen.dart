@@ -167,19 +167,18 @@ class _SignupStepsScreenState extends State<SignupStepsScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Icon(
-                    _isUsernameAvailable ? Icons.check_circle : Icons.error,
-                    color: _isUsernameAvailable ? Colors.green : Colors.red,
+                    _isUsernameAvailable ? Icons.check_circle : Icons.cancel,
+                    color: _isUsernameAvailable ? AppColors.accent : AppColors.error,
                   ),
           ),
           onChanged: _checkUsername,
         ),
         const SizedBox(height: 16),
         Text(
-          _isUsernameAvailable
-              ? 'Username is available!'
-              : 'Username must be at least 3 characters and unique',
+          _isUsernameAvailable ? 'Username available' : 'Username taken',
           style: TextStyle(
-            color: _isUsernameAvailable ? Colors.green : Colors.red,
+            color: _isUsernameAvailable ? AppColors.accent : AppColors.error,
+            fontSize: AppTheme.fontSize_sm,
           ),
         ),
       ],

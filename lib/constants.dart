@@ -3,13 +3,21 @@ import 'package:flutter/material.dart';
 // App theme colors
 class AppColors {
   static const Color primary = Color(0xFF121212);
-  static const Color accent = Color(0xFFFF0050);    // Back to pink/red
+  static const Color accent = Color(0xFF00FF91);    // Mint green - main brand color
+  static const Color heart = Color(0xFFFF4D8D);     // Soft pink - for likes
+  static const Color save = Color(0xFF7B61FF);      // Indigo - for bookmarks
+  static const Color error = Color(0xFFFF0000);     // Keep red for errors only
   static const Color secondary = Color(0xFFE8E8E8);
   static const Color background = Color(0xFF000000);
   static const Color darkGrey = Color(0xFF121212);
   static const Color grey = Color(0xFF757575);
   static const Color white = Color(0xFFFFFFFF);
-  static const Color buttonText = Color(0xFFFFFFFF); // White text for buttons
+  static const Color black = Color(0xFF000000);
+  static const Color buttonText = Color(0xFF000000); // Black text for buttons
+
+  // Gradient colors for overlays
+  static final Color overlayStart = Colors.black.withOpacity(0.8);
+  static final Color overlayEnd = Colors.transparent;
 }
 
 // Material design constants
@@ -41,10 +49,14 @@ class AppTheme {
   // Button Styles
   static final ButtonStyle primaryButton = ElevatedButton.styleFrom(
     backgroundColor: AppColors.accent,
-    foregroundColor: AppColors.buttonText, // White text
+    foregroundColor: AppColors.buttonText, // Black text
     padding: const EdgeInsets.symmetric(
       horizontal: spacing_lg,
       vertical: spacing_md,
+    ),
+    textStyle: const TextStyle(
+      fontSize: fontSize_md,
+      fontWeight: FontWeight.bold,
     ),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(borderRadius_md),
@@ -52,11 +64,15 @@ class AppTheme {
   );
 
   static final ButtonStyle secondaryButton = ElevatedButton.styleFrom(
-    backgroundColor: AppColors.darkGrey,
-    foregroundColor: AppColors.white, // White text
+    backgroundColor: AppColors.secondary,
+    foregroundColor: AppColors.buttonText, // Black text
     padding: const EdgeInsets.symmetric(
       horizontal: spacing_lg,
       vertical: spacing_md,
+    ),
+    textStyle: const TextStyle(
+      fontSize: fontSize_md,
+      fontWeight: FontWeight.bold,
     ),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(borderRadius_md),

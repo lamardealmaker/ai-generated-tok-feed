@@ -59,6 +59,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _handleLogin(BuildContext context) {
+    _handleSubmit();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,12 +106,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
                       style: AppTheme.primaryButton,
-                      onPressed: _handleSubmit,
-                      child: Text(
-                        _isLogin ? 'Log In' : 'Next',
-                        style: const TextStyle(
+                      onPressed: () => _handleLogin(context),
+                      child: const Text(
+                        'Login',
+                        style: TextStyle(
                           fontSize: AppTheme.fontSize_md,
                           fontWeight: FontWeight.bold,
+                          color: Colors.black,
                         ),
                       ),
                     )),

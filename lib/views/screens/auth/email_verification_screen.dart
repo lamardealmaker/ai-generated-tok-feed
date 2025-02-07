@@ -104,21 +104,16 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               ),
               const SizedBox(height: AppTheme.spacing_xl),
               Obx(() => ElevatedButton(
+                style: AppTheme.primaryButton,
                 onPressed: timeLeft.value > 0 ? null : _resendVerification,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacing_xl,
-                    vertical: AppTheme.spacing_md,
-                  ),
-                ),
                 child: Text(
                   timeLeft.value > 0
                       ? 'Resend in ${timeLeft.value}s'
                       : 'Resend Email',
                   style: const TextStyle(
-                    color: AppColors.white,
                     fontSize: AppTheme.fontSize_md,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.black,
                   ),
                 ),
               )),
