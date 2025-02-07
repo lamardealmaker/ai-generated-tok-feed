@@ -379,34 +379,6 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                                 ],
                               ),
                             ),
-                            
-                            // Like button
-                            Column(
-                              children: [
-                                IconButton(
-                                  onPressed: () {
-                                    // TODO: Implement like functionality
-                                  },
-                                  icon: Icon(
-                                    Icons.favorite_border,
-                                    color: Colors.grey[600],
-                                    size: 20,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                    minWidth: 20,
-                                    minHeight: 20,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                ),
-                                Text(
-                                  comment.likes.toString(),
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ],
                         ),
                       );

@@ -6,8 +6,7 @@ class CommentModel {
   final String userId;
   final String username;
   final String text;
-  final dynamic createdAt;  // Keep as dynamic to handle both DateTime and Timestamp
-  final int likes;
+  final dynamic createdAt;
   final String? parentId;
 
   CommentModel({
@@ -17,7 +16,6 @@ class CommentModel {
     required this.username,
     required this.text,
     required this.createdAt,
-    required this.likes,
     this.parentId,
   });
 
@@ -29,7 +27,6 @@ class CommentModel {
       'username': username,
       'text': text,
       'createdAt': createdAt is DateTime ? Timestamp.fromDate(createdAt as DateTime) : createdAt,
-      'likes': likes,
       'parentId': parentId,
     };
   }
@@ -42,7 +39,6 @@ class CommentModel {
       username: json['username'],
       text: json['text'],
       createdAt: json['createdAt'],
-      likes: json['likes'],
       parentId: json['parentId'],
     );
   }
@@ -68,7 +64,6 @@ class CommentModel {
       username: data['username'] ?? '',
       text: data['text'] ?? '',
       createdAt: timestamp,
-      likes: data['likes'] ?? 0,
       parentId: data['parentId'],
     );
   }
@@ -87,7 +82,6 @@ class CommentModel {
     String? username,
     String? text,
     dynamic createdAt,
-    int? likes,
     String? parentId,
   }) {
     return CommentModel(
@@ -97,7 +91,6 @@ class CommentModel {
       username: username ?? this.username,
       text: text ?? this.text,
       createdAt: createdAt ?? this.createdAt,
-      likes: likes ?? this.likes,
       parentId: parentId ?? this.parentId,
     );
   }

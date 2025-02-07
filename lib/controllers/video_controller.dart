@@ -466,7 +466,6 @@ class VideoController extends GetxController {
         username: username ?? 'Anonymous',
         text: text,
         createdAt: timestamp,
-        likes: 0,
         parentId: null,
       );
 
