@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:get/get.dart';
@@ -7,6 +8,8 @@ import '../../models/comment_model.dart';
 import '../../models/property_details.dart';
 import '../../constants.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'video_interaction_button.dart';
+import 'video_progress_bar.dart';
 
 class VideoPlayerItem extends StatefulWidget {
   final VideoModel video;
@@ -26,11 +29,41 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   final VideoController videoController = Get.find<VideoController>();
   VideoPlayerController? _videoPlayerController;
   bool _isInitialized = false;
+  final ValueNotifier<Duration> _position = ValueNotifier(Duration.zero);
+  bool _hasTriggeredCompletion = false;
 
   @override
   void initState() {
     super.initState();
     _initializeVideo();
+  }
+
+  void _setupVideoController() {
+    if (_videoPlayerController != null) {
+      // Listen for position updates
+      _videoPlayerController!.addListener(() {
+        if (!mounted) return;
+        
+        // Update progress bar
+        _position.value = _videoPlayerController!.value.position;
+        
+        // Check for video completion - use a threshold approach
+        if (_videoPlayerController!.value.duration.inMilliseconds > 0 &&
+            _videoPlayerController!.value.position.inMilliseconds >= 
+            _videoPlayerController!.value.duration.inMilliseconds - 50) {  // Trigger slightly earlier
+          // Only trigger once near the end
+          if (!_hasTriggeredCompletion) {
+            _hasTriggeredCompletion = true;
+            videoController.onVideoFinished();
+          }
+        } else {
+          _hasTriggeredCompletion = false;
+        }
+      });
+      
+      // Ensure video doesn't loop
+      _videoPlayerController!.setLooping(false);
+    }
   }
 
   void _initializeVideo() {
@@ -39,6 +72,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
       setState(() {
         _isInitialized = true;
       });
+      _setupVideoController();
     }
   }
 
@@ -46,16 +80,15 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   void didUpdateWidget(VideoPlayerItem oldWidget) {
     super.didUpdateWidget(oldWidget);
     
-    // Check if we need to update the controller
     final newController = videoController.getController(widget.video.id);
     if (newController != _videoPlayerController) {
       setState(() {
         _videoPlayerController = newController;
         _isInitialized = newController != null;
       });
+      _setupVideoController();
     }
 
-    // Handle play/pause state changes
     if (widget.isPlaying != oldWidget.isPlaying) {
       if (widget.isPlaying) {
         _videoPlayerController?.play();
@@ -67,7 +100,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
 
   @override
   void dispose() {
-    // Don't dispose the controller here as it's managed by VideoController
+    _position.dispose();
     super.dispose();
   }
 
@@ -93,6 +126,26 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                     color: AppColors.accent,
                   ),
                 ),
+        ),
+
+        // Progress Bar
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: _isInitialized && _videoPlayerController != null
+              ? ValueListenableBuilder<Duration>(
+                  valueListenable: _position,
+                  builder: (context, position, child) {
+                    return VideoProgressBar(
+                      position: position,
+                      duration: _videoPlayerController!.value.duration,
+                      height: 3.5,
+                      color: Colors.white,
+                    );
+                  },
+                )
+              : const SizedBox.shrink(),
         ),
 
         // Video Controls
@@ -185,131 +238,52 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
 
         // Interaction Buttons
         Positioned(
-          right: 10,
+          right: 8,
           bottom: 100,
-          child: Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: Column(
-              children: [
-                // Like Button and Count
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () => videoController.likeVideo(widget.video.id),
-                      icon: Obx(() => Icon(
-                        widget.video.isLiked.value ? Icons.favorite : Icons.favorite_border,
-                        color: widget.video.isLiked.value ? AppColors.heart : AppColors.white,
-                        size: 30,
-                      )),
-                    ),
-                    Text(
-                      widget.video.likes.toString(),
-                      style: const TextStyle(
-                        color: AppColors.white,
-                        fontSize: AppTheme.fontSize_sm,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Like Button
+              Obx(() => VideoInteractionButton(
+                icon: widget.video.isLiked.value ? Icons.favorite : Icons.favorite_border,
+                count: widget.video.likes.toString(),
+                onPressed: () => videoController.likeVideo(widget.video.id),
+                isSelected: widget.video.isLiked.value,
+              )),
+              const SizedBox(height: 4),
 
-                // Comment Button and Count
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        _showCommentsSheet(context);
-                      },
-                      icon: const Icon(
-                        Icons.comment,
-                        color: AppColors.white,
-                        size: 30,
-                      ),
-                    ),
-                    Text(
-                      widget.video.comments.toString(),
-                      style: const TextStyle(
-                        color: AppColors.white,
-                        fontSize: AppTheme.fontSize_sm,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
+              // Comment Button
+              VideoInteractionButton(
+                icon: Icons.comment,
+                count: widget.video.comments.toString(),
+                onPressed: () => _showCommentsSheet(context),
+              ),
+              const SizedBox(height: 4),
 
-                // Share Button and Count
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () => videoController.shareVideo(widget.video.id),
-                      icon: const Icon(
-                        Icons.share,
-                        color: AppColors.white,
-                        size: 30,
-                      ),
-                    ),
-                    Text(
-                      widget.video.shares.toString(),
-                      style: const TextStyle(
-                        color: AppColors.white,
-                        fontSize: AppTheme.fontSize_sm,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
+              // Share Button
+              VideoInteractionButton(
+                icon: Icons.share,
+                count: widget.video.shares.toString(),
+                onPressed: () => videoController.shareVideo(widget.video.id),
+              ),
+              const SizedBox(height: 4),
 
-                // Property Info Button
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        _showPropertySheet(context);
-                      },
-                      icon: const Icon(
-                        Icons.info_outline,
-                        color: AppColors.white,
-                        size: 30,
-                      ),
-                    ),
-                    const Text(
-                      'Info',
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: AppTheme.fontSize_sm,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
+              // Property Info Button
+              VideoInteractionButton(
+                icon: Icons.info_outline,
+                count: 'Info',
+                onPressed: () => _showPropertySheet(context),
+              ),
+              const SizedBox(height: 4),
 
-                // Favorite Button
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () => videoController.toggleFavorite(widget.video.id),
-                      icon: Obx(() => Icon(
-                        widget.video.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
-                        color: widget.video.isFavorite.value ? AppColors.save : AppColors.white,
-                        size: 30,
-                      )),
-                    ),
-                    const Text(
-                      'Save',
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: AppTheme.fontSize_sm,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              // Favorite Button
+              Obx(() => VideoInteractionButton(
+                icon: widget.video.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
+                count: 'Save',
+                onPressed: () => videoController.toggleFavorite(widget.video.id),
+                isSelected: widget.video.isFavorite.value,
+              )),
+            ],
           ),
         ),
       ],

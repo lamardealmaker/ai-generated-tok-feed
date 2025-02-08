@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:ui';
 import '../../constants.dart';
 import '../../controllers/video_controller.dart';
 import '../widgets/video_player_item.dart';
@@ -30,6 +31,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _pageController = PageController(
       initialPage: videoController.currentVideoIndex.value,
     );
+    // Give VideoController access to PageController
+    videoController.setPageController(_pageController);
   }
 
   void _initAnimationController() {
@@ -80,29 +83,49 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Obx(() => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(25),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTabButton(
-                title: 'Trending',
-                isSelected: videoController.isTrendingSelected.value,
-                onTap: () => _handleTabChange(true),
-                isEnabled: !_isTabChanging,
+        toolbarHeight: 44, 
+        title: Obx(() => Padding(
+          padding: const EdgeInsets.only(top: 8), 
+          child: Container(
+            height: 36, 
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 0.5,
               ),
-              const SizedBox(width: 16),
-              _buildTabButton(
-                title: 'For You',
-                isSelected: !videoController.isTrendingSelected.value,
-                onTap: () => _handleTabChange(false),
-                isEnabled: !_isTabChanging,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(25),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTabButton(
+                      title: 'Trending',
+                      isSelected: videoController.isTrendingSelected.value,
+                      onTap: () => _handleTabChange(true),
+                      isEnabled: !_isTabChanging,
+                    ),
+                    Container(
+                      height: 12,
+                      width: 0.5,
+                      color: Colors.white.withOpacity(0.2),
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    _buildTabButton(
+                      title: 'For You',
+                      isSelected: !videoController.isTrendingSelected.value,
+                      onTap: () => _handleTabChange(false),
+                      isEnabled: !_isTabChanging,
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
         )),
         centerTitle: true,
@@ -126,17 +149,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       scrollDirection: Axis.vertical,
                       controller: _pageController,
                       onPageChanged: (index) {
-                        videoController.onVideoIndexChanged(index);
+                        videoController.onVideoIndexChanged(index % videoController.videos.length);
                       },
-                      itemCount: videoController.videos.length,
+                      itemCount: null, // Allow infinite scrolling
                       itemBuilder: (context, index) {
-                        final video = videoController.videos[index];
+                        // Normalize the index to wrap around
+                        final normalizedIndex = index % videoController.videos.length;
+                        final video = videoController.videos[normalizedIndex];
+                        
                         return VideoPlayerItem(
                           key: Key(video.id),
                           video: video,
-                          isPlaying: videoController.currentVideoIndex.value == index && 
-                                   !_isPageChanging && 
-                                   !_isTabChanging,
+                          isPlaying: !_isPageChanging && normalizedIndex == videoController.currentVideoIndex.value,
                         );
                       },
                     ),
@@ -182,20 +206,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return GestureDetector(
       onTap: isEnabled ? onTap : null,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),  // Match fade duration
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accent : Colors.transparent,
+          color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           title,
           style: TextStyle(
             color: isEnabled 
-                ? (isSelected ? AppColors.buttonText : AppColors.white)
-                : AppColors.white.withOpacity(0.5),
-            fontSize: isSelected ? 16 : 15,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ? (isSelected ? Colors.white : Colors.white.withOpacity(0.8))
+                : Colors.white.withOpacity(0.5),
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            letterSpacing: 0.2,
           ),
         ),
       ),
