@@ -138,4 +138,9 @@ class UserService {
     final String avatarUrl = 'assets/avatars/avatar$avatarNumber.png';
     await updateUser(uid, {'profileImageUrl': avatarUrl});
   }
+
+  // Update username
+  Future<void> updateUsername(String uid, String username) async {
+    await updateUser(uid, {'username': username});
+  }
 }

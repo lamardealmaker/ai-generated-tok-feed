@@ -6,6 +6,7 @@ import '../../controllers/video_controller.dart';
 import '../../models/comment_model.dart';
 import '../../models/property_details.dart';
 import '../../constants.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class VideoPlayerItem extends StatefulWidget {
   final VideoModel video;
@@ -676,25 +677,63 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          property.agentName,
-                          style: const TextStyle(
-                            color: AppColors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: AppColors.darkGrey,
+                      child: Icon(
+                        Icons.person,
+                        color: AppColors.accent,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'John Smith',
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          property.agencyName,
-                          style: TextStyle(
-                            color: AppColors.white.withOpacity(0.7),
-                            fontSize: 14,
+                          Text(
+                            'Premier Real Estate',
+                            style: TextStyle(
+                              color: AppColors.white.withOpacity(0.7),
+                              fontSize: 14,
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        final Uri phoneUri = Uri.parse('tel:+15555550123');
+                        if (await canLaunchUrl(phoneUri)) {
+                          await launchUrl(phoneUri);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.buttonText,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
                         ),
-                      ],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Contact Agent',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),

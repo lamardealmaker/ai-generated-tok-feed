@@ -65,27 +65,46 @@ class ProfileScreen extends StatelessWidget {
               Center(
                 child: Stack(
                   children: [
-                    if (user.profileImageUrl != null)
-                      CircleAvatar(
-                        radius: 64,
-                        backgroundImage: NetworkImage(user.profileImageUrl!),
-                      )
-                    else
-                      AvatarGenerator.generateAvatar(
-                        username: user.username,
-                        email: user.email,
-                        radius: 64,
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.accent,
+                          width: 2,
+                        ),
                       ),
+                      child: user.profileImageUrl != null
+                          ? CircleAvatar(
+                              radius: 64,
+                              backgroundImage: NetworkImage(user.profileImageUrl!),
+                            )
+                          : AvatarGenerator.generateAvatar(
+                              username: user.username,
+                              email: user.email,
+                              radius: 64,
+                            ),
+                    ),
                     Positioned(
                       bottom: 0,
                       right: 0,
-                      child: CircleAvatar(
-                        backgroundColor: AppColors.accent,
-                        radius: 20,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.accent,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.background,
+                            width: 2,
+                          ),
+                        ),
                         child: IconButton(
                           icon: const Icon(Icons.camera_alt, size: 20),
-                          color: Colors.white,
+                          color: AppColors.buttonText,
                           onPressed: _pickImage,
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ),
+                          padding: EdgeInsets.zero,
                         ),
                       ),
                     ),
@@ -94,37 +113,104 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // User Info
-              _buildInfoTile('Email', user.email),
-              if (user.username != null)
-                _buildInfoTile('Username', user.username!),
-              if (user.fullName != null)
-                _buildInfoTile('Full Name', user.fullName!),
-              if (user.phoneNumber != null)
-                _buildInfoTile('Phone', user.phoneNumber!),
-              _buildInfoTile('Account Type', user.userType),
-              _buildInfoTile(
-                'Member Since',
-                '${user.createdAt.day}/${user.createdAt.month}/${user.createdAt.year}',
+              // Username
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.darkGrey,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Username',
+                          style: TextStyle(
+                            color: AppColors.grey,
+                            fontSize: 14,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            // Show username edit dialog
+                            Get.dialog(
+                              AlertDialog(
+                                backgroundColor: AppColors.darkGrey,
+                                title: const Text(
+                                  'Edit Username',
+                                  style: TextStyle(color: AppColors.white),
+                                ),
+                                content: TextField(
+                                  controller: TextEditingController(text: user.username),
+                                  style: const TextStyle(color: AppColors.white),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Enter new username',
+                                    hintStyle: TextStyle(color: AppColors.grey),
+                                  ),
+                                  onSubmitted: (value) async {
+                                    if (value.isNotEmpty) {
+                                      await _userService.updateUsername(user.uid, value);
+                                      await _authController.refreshUserModel();
+                                      Get.back();
+                                    }
+                                  },
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Get.back(),
+                                    child: const Text('Cancel'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Edit',
+                            style: TextStyle(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user.username ?? 'Set your username',
+                      style: const TextStyle(
+                        color: AppColors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 24),
 
-              // Edit Profile Button
-              ElevatedButton(
-                style: AppTheme.primaryButton,
-                onPressed: () {
-                  Get.snackbar(
-                    'Coming Soon',
-                    'Edit profile feature will be available soon!',
-                    snackPosition: SnackPosition.BOTTOM,
-                  );
-                },
-                child: const Text(
-                  'Edit Profile',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSize_md,
-                    fontWeight: FontWeight.bold,
+              // Sign Out Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => _authController.signOut(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkGrey,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Sign Out',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -132,33 +218,6 @@ class ProfileScreen extends StatelessWidget {
           ),
         );
       }),
-    );
-  }
-
-  Widget _buildInfoTile(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: AppColors.white),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
