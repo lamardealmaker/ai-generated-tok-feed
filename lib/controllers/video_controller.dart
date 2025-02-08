@@ -7,14 +7,18 @@ import 'package:share_plus/share_plus.dart';
 import '../models/video_model.dart';
 import '../models/comment_model.dart';
 import '../constants.dart';
+import '../views/widgets/loading_overlay.dart';
 
 class VideoController extends GetxController {
   final RxList<VideoModel> videos = RxList<VideoModel>([]);
   final RxList<VideoModel> trendingVideos = RxList<VideoModel>([]);
   final RxList<VideoModel> forYouVideos = RxList<VideoModel>([]);
   final RxInt currentVideoIndex = 0.obs;
+  final RxInt trendingIndex = 0.obs;
+  final RxInt forYouIndex = 0.obs;
   final RxBool isLoading = false.obs;
-  final RxBool isTrendingSelected = false.obs; // Changed from true to false
+  final RxBool isTrendingSelected = false.obs;
+  final RxBool _isTabChanging = false.obs;
   
   // Map to store comments for each video
   final RxMap<String, List<CommentModel>> commentsMap = RxMap<String, List<CommentModel>>({});
@@ -23,8 +27,13 @@ class VideoController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
-  // Keep track of preloaded controllers
-  final Map<String, VideoPlayerController> _videoControllers = {};
+  // Separate controller maps for each tab
+  final Map<String, VideoPlayerController> _trendingControllers = {};
+  final Map<String, VideoPlayerController> _forYouControllers = {};
+  
+  // Getter for active controller map
+  Map<String, VideoPlayerController> get _videoControllers => 
+      isTrendingSelected.value ? _trendingControllers : _forYouControllers;
 
   @override
   void onInit() {
@@ -34,10 +43,15 @@ class VideoController extends GetxController {
 
   @override
   void onClose() {
-    for (var controller in _videoControllers.values) {
+    // Dispose all controllers in both maps
+    for (var controller in _trendingControllers.values) {
       controller.dispose();
     }
-    _videoControllers.clear();
+    for (var controller in _forYouControllers.values) {
+      controller.dispose();
+    }
+    _trendingControllers.clear();
+    _forYouControllers.clear();
     super.onClose();
   }
 
@@ -110,7 +124,7 @@ class VideoController extends GetxController {
         
         // Pre-initialize second video if available
         if (videos.length > 1) {
-          _initializeVideo(1); // Don't await this one
+          _initializeVideo(1);
         }
       }
       
@@ -121,19 +135,29 @@ class VideoController extends GetxController {
     }
   }
 
-  void switchTab(bool toTrending) {
+  Future<void> switchTab(bool toTrending) async {
+    _isTabChanging.value = true;
+    // Pause current video before switching
+    final currentVideoId = videos[currentVideoIndex.value].id;
+    final currentController = _videoControllers[currentVideoId];
+    if (currentController?.value.isPlaying ?? false) {
+      await currentController?.pause();
+    }
+
     isTrendingSelected.value = toTrending;
     videos.value = toTrending ? trendingVideos : forYouVideos;
-    currentVideoIndex.value = 0;  // Reset to first video when switching tabs
     
-    // Initialize first video of the new tab immediately
-    if (videos.isNotEmpty) {
-      _initializeVideo(0);
-      // Pre-initialize second video if available
-      if (videos.length > 1) {
-        _initializeVideo(1);
-      }
+    // Restore previous position for the selected tab
+    currentVideoIndex.value = toTrending ? trendingIndex.value : forYouIndex.value;
+    
+    // Initialize video at remembered position
+    await _initializeVideo(currentVideoIndex.value);
+    
+    // Pre-initialize next video if available
+    if (currentVideoIndex.value < videos.length - 1) {
+      _initializeVideo(currentVideoIndex.value + 1);
     }
+    _isTabChanging.value = false;
   }
 
   Future<void> _initializeVideo(int index) async {
@@ -141,35 +165,28 @@ class VideoController extends GetxController {
 
     final video = videos[index];
     try {
-      print('Initializing video ${video.id} at index $index'); // Debug print
-      print('Video URL: ${video.videoUrl}'); // Debug print
-
-      // Check if we already have an initialized controller
+      // Check if we already have an initialized controller in the active map
       if (_videoControllers.containsKey(video.id) && 
           _videoControllers[video.id]!.value.isInitialized) {
-        print('Using existing controller for ${video.id}'); // Debug print
+        // If this is the current video and we're not in a tab switch, start playing
+        if (index == currentVideoIndex.value && !_isTabChanging.value) {
+          await _videoControllers[video.id]!.play();
+        }
         return;
       }
 
       // Only dispose if we're creating a new controller
       if (_videoControllers.containsKey(video.id)) {
-        print('Disposing existing controller for ${video.id}'); // Debug print
         await _videoControllers[video.id]!.dispose();
         _videoControllers.remove(video.id);
       }
 
-      // Validate URL format and accessibility
-      try {
-        final uri = Uri.parse(video.videoUrl);
-        if (!uri.isAbsolute) {
-          throw ArgumentError('Invalid video URL format');
-        }
-      } catch (e) {
-        print('Error parsing video URL for ${video.id}: $e');
-        return;
+      // Validate URL format
+      final uri = Uri.parse(video.videoUrl);
+      if (!uri.isAbsolute) {
+        throw ArgumentError('Invalid video URL format');
       }
 
-      print('Creating new controller for ${video.id}'); // Debug print
       final controller = VideoPlayerController.network(
         video.videoUrl,
         videoPlayerOptions: VideoPlayerOptions(
@@ -184,32 +201,22 @@ class VideoController extends GetxController {
       
       _videoControllers[video.id] = controller;
       
-      print('Initializing controller for ${video.id}'); // Debug print
       await controller.initialize();
-      print('Controller initialized successfully for ${video.id}'); // Debug print
       
       // Check if video loaded successfully
       if (!controller.value.isInitialized) {
-        print('Error: Video controller failed to initialize for ${video.id}');
         _videoControllers.remove(video.id);
         return;
       }
 
       controller.setLooping(true);
       
-      if (index == currentVideoIndex.value) {
-        print('Playing video ${video.id} as it is the current video'); // Debug print
+      // Only play if this is the current video and we're not in a tab switch
+      if (index == currentVideoIndex.value && !_isTabChanging.value) {
         await controller.play();
-      }
-
-      // Preload next video if available and not already loaded
-      if (index + 1 < videos.length && !_videoControllers.containsKey(videos[index + 1].id)) {
-        print('Preloading next video at index ${index + 1}'); // Debug print
-        _initializeVideo(index + 1);
       }
     } catch (e) {
       print('Error initializing video ${video.id}: $e');
-      // Remove failed controller
       if (_videoControllers.containsKey(video.id)) {
         await _videoControllers[video.id]!.dispose();
         _videoControllers.remove(video.id);
@@ -218,7 +225,15 @@ class VideoController extends GetxController {
   }
 
   void onVideoIndexChanged(int index) {
+    // Update current index
     currentVideoIndex.value = index;
+    
+    // Update tab-specific index
+    if (isTrendingSelected.value) {
+      trendingIndex.value = index;
+    } else {
+      forYouIndex.value = index;
+    }
     
     // Initialize current video if not already initialized
     _initializeVideo(index);
@@ -233,7 +248,6 @@ class VideoController extends GetxController {
   }
 
   void _cleanupUnusedControllers(int currentIndex) {
-    // Keep only controllers for current, previous, and next videos
     final keysToKeep = <String>{};
     
     // Add current video
@@ -251,7 +265,7 @@ class VideoController extends GetxController {
       keysToKeep.add(videos[currentIndex + 1].id);
     }
     
-    // Remove controllers that are no longer needed
+    // Remove controllers that are no longer needed from the active map only
     _videoControllers.removeWhere((key, controller) {
       if (!keysToKeep.contains(key)) {
         controller.dispose();

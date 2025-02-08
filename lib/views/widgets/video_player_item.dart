@@ -66,6 +66,12 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   }
 
   @override
+  void dispose() {
+    // Don't dispose the controller here as it's managed by VideoController
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Stack(
       fit: StackFit.expand,
