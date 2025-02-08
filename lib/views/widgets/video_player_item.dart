@@ -36,6 +36,11 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
   void initState() {
     super.initState();
     _initializeVideo();
+    
+    // Auto-play if this is the first video
+    if (widget.isPlaying && mounted) {
+      _videoPlayerController?.play();
+    }
   }
 
   void _setupVideoController() {
@@ -89,6 +94,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
       _setupVideoController();
     }
 
+    // Handle play state changes
     if (widget.isPlaying != oldWidget.isPlaying) {
       if (widget.isPlaying) {
         _videoPlayerController?.play();

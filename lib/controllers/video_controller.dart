@@ -122,8 +122,12 @@ class VideoController extends GetxController {
       videos.value = isTrendingSelected.value ? trendingVideos : forYouVideos;
 
       if (videos.isNotEmpty) {
-        // Initialize first video immediately
+        // Initialize first video immediately and play it
         await _initializeVideoController(videos[0], 0);
+        final firstController = _videoControllers[videos[0].id];
+        if (firstController != null) {
+          await firstController.play();
+        }
         
         // Pre-initialize second video if available
         if (videos.length > 1) {
@@ -170,32 +174,31 @@ class VideoController extends GetxController {
   void onVideoFinished() {
     if (_pageController == null || _isTabChanging.value) return;
 
-    final currentList = isTrendingSelected.value ? trendingVideos : forYouVideos;
-    final currentIndex = isTrendingSelected.value ? trendingIndex.value : forYouIndex.value;
+    // Always use nextPage for consistent animation
+    _pageController!.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
 
-    if (currentIndex >= currentList.length - 1) {
-      // We're on the last video, prepare the first video
-      if (videos.isNotEmpty) {
-        // Ensure first video is initialized and ready
-        final firstVideo = videos[0];
-        if (!_videoControllers.containsKey(firstVideo.id)) {
-          _initializeVideoController(firstVideo, 0);
-        }
-        
-        // Use same animation as regular next video
-        _pageController!.animateToPage(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      }
+  void onVideoIndexChanged(int index) {
+    // Update indices
+    if (isTrendingSelected.value) {
+      trendingIndex.value = index;
     } else {
-      // Not the last video, just go to next
-      _pageController!.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      forYouIndex.value = index;
     }
+    currentVideoIndex.value = index;
+    
+    // Initialize current video if not already initialized
+    _initializeVideoController(videos[index], index);
+    
+    // Pre-initialize next video (accounting for wrap-around)
+    final nextIndex = (index + 1) % videos.length;
+    _initializeVideoController(videos[nextIndex], nextIndex);
+    
+    // Clean up videos that are no longer needed
+    _cleanupUnusedControllers();
   }
 
   Future<void> _initializeVideoController(VideoModel video, int index) async {
@@ -229,30 +232,6 @@ class VideoController extends GetxController {
         _videoControllers.remove(video.id);
       }
     }
-  }
-
-  void onVideoIndexChanged(int index) {
-    // Update indices
-    if (isTrendingSelected.value) {
-      trendingIndex.value = index;
-    } else {
-      forYouIndex.value = index;
-    }
-    currentVideoIndex.value = index;
-    
-    // Initialize current video if not already initialized
-    _initializeVideoController(videos[index], index);
-    
-    // Pre-initialize next video if available
-    if (index < videos.length - 1) {
-      _initializeVideoController(videos[index + 1], index + 1);
-    } else if (index == videos.length - 1) {
-      // On last video, pre-initialize first video for smooth loop
-      _initializeVideoController(videos[0], 0);
-    }
-    
-    // Clean up videos that are no longer needed
-    _cleanupUnusedControllers();
   }
 
   void _cleanupUnusedControllers() {

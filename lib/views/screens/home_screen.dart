@@ -25,13 +25,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.initState();
     _initPageController();
     _initAnimationController();
+    
+    // Ensure first video plays after widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final firstVideo = videoController.videos.firstOrNull;
+      if (firstVideo != null) {
+        final controller = videoController.getController(firstVideo.id);
+        controller?.play();
+      }
+    });
   }
 
   void _initPageController() {
+    // Initialize with a large initial page number so we can scroll both directions
     _pageController = PageController(
-      initialPage: videoController.currentVideoIndex.value,
+      initialPage: 10000, // Start at a large number
     );
-    // Give VideoController access to PageController
     videoController.setPageController(_pageController);
   }
 
@@ -149,18 +158,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       scrollDirection: Axis.vertical,
                       controller: _pageController,
                       onPageChanged: (index) {
-                        videoController.onVideoIndexChanged(index % videoController.videos.length);
+                        // Convert the large index to video index using modulo
+                        final videoIndex = index % videoController.videos.length;
+                        videoController.onVideoIndexChanged(videoIndex);
                       },
-                      itemCount: null, // Allow infinite scrolling
                       itemBuilder: (context, index) {
-                        // Normalize the index to wrap around
-                        final normalizedIndex = index % videoController.videos.length;
-                        final video = videoController.videos[normalizedIndex];
+                        // Use modulo to wrap around to appropriate video
+                        final videoIndex = index % videoController.videos.length;
+                        final video = videoController.videos[videoIndex];
                         
                         return VideoPlayerItem(
-                          key: Key(video.id),
+                          key: ValueKey('${video.id}_$videoIndex'),
                           video: video,
-                          isPlaying: !_isPageChanging && normalizedIndex == videoController.currentVideoIndex.value,
+                          isPlaying: !_isPageChanging && 
+                              videoIndex == videoController.currentVideoIndex.value,
                         );
                       },
                     ),
