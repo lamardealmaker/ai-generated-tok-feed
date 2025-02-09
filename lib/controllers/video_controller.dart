@@ -122,12 +122,8 @@ class VideoController extends GetxController {
       videos.value = isTrendingSelected.value ? trendingVideos : forYouVideos;
 
       if (videos.isNotEmpty) {
-        // Initialize first video immediately and play it
+        // Initialize first video immediately
         await _initializeVideoController(videos[0], 0);
-        final firstController = _videoControllers[videos[0].id];
-        if (firstController != null) {
-          await firstController.play();
-        }
         
         // Pre-initialize second video if available
         if (videos.length > 1) {
@@ -174,11 +170,19 @@ class VideoController extends GetxController {
   void onVideoFinished() {
     if (_pageController == null || _isTabChanging.value) return;
 
-    // Always use nextPage for consistent animation
+    final currentList = isTrendingSelected.value ? trendingVideos : forYouVideos;
+    final currentIndex = isTrendingSelected.value ? trendingIndex.value : forYouIndex.value;
+    
+    // Always use nextPage, even for the last video
     _pageController!.nextPage(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+    
+    // If we're on the last video, pre-initialize first video
+    if (currentIndex >= currentList.length - 1) {
+      _initializeVideoController(videos[0], 0);
+    }
   }
 
   void onVideoIndexChanged(int index) {
@@ -193,12 +197,36 @@ class VideoController extends GetxController {
     // Initialize current video if not already initialized
     _initializeVideoController(videos[index], index);
     
-    // Pre-initialize next video (accounting for wrap-around)
-    final nextIndex = (index + 1) % videos.length;
-    _initializeVideoController(videos[nextIndex], nextIndex);
+    // Pre-initialize next video
+    _initializeVideoController(
+      videos[(index + 1) % videos.length],
+      (index + 1) % videos.length
+    );
     
     // Clean up videos that are no longer needed
     _cleanupUnusedControllers();
+  }
+
+  void _cleanupUnusedControllers() {
+    final keysToKeep = <String>{};
+    final currentIndex = currentVideoIndex.value;
+    
+    // Keep current video
+    keysToKeep.add(videos[currentIndex].id);
+    
+    // Keep previous video
+    if (currentIndex > 0) {
+      keysToKeep.add(videos[currentIndex - 1].id);
+    } else {
+      // If we're at the first video, keep the last video
+      keysToKeep.add(videos[videos.length - 1].id);
+    }
+    
+    // Keep next video
+    keysToKeep.add(videos[(currentIndex + 1) % videos.length].id);
+    
+    // Remove controllers that are no longer needed
+    _videoControllers.removeWhere((key, _) => !keysToKeep.contains(key));
   }
 
   Future<void> _initializeVideoController(VideoModel video, int index) async {
@@ -232,37 +260,6 @@ class VideoController extends GetxController {
         _videoControllers.remove(video.id);
       }
     }
-  }
-
-  void _cleanupUnusedControllers() {
-    final keysToKeep = <String>{};
-    
-    // Add current video
-    if (currentVideoIndex.value >= 0 && currentVideoIndex.value < videos.length) {
-      keysToKeep.add(videos[currentVideoIndex.value].id);
-    }
-    
-    // Add previous video
-    if (currentVideoIndex.value > 0) {
-      keysToKeep.add(videos[currentVideoIndex.value - 1].id);
-    }
-    
-    // Add next video
-    if (currentVideoIndex.value < videos.length - 1) {
-      keysToKeep.add(videos[currentVideoIndex.value + 1].id);
-    }
-    
-    // Add first video for smooth loop
-    keysToKeep.add(videos[0].id);
-    
-    // Remove controllers that are no longer needed from the active map only
-    _videoControllers.removeWhere((key, controller) {
-      if (!keysToKeep.contains(key)) {
-        controller.dispose();
-        return true;
-      }
-      return false;
-    });
   }
 
   VideoPlayerController? getController(String videoId) {

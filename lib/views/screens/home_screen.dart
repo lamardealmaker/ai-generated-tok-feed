@@ -25,22 +25,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.initState();
     _initPageController();
     _initAnimationController();
-    
-    // Ensure first video plays after widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final firstVideo = videoController.videos.firstOrNull;
-      if (firstVideo != null) {
-        final controller = videoController.getController(firstVideo.id);
-        controller?.play();
-      }
-    });
   }
 
   void _initPageController() {
-    // Initialize with a large initial page number so we can scroll both directions
     _pageController = PageController(
-      initialPage: 10000, // Start at a large number
+      initialPage: videoController.currentVideoIndex.value,
     );
+    // Give VideoController access to PageController
     videoController.setPageController(_pageController);
   }
 
@@ -158,20 +149,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       scrollDirection: Axis.vertical,
                       controller: _pageController,
                       onPageChanged: (index) {
-                        // Convert the large index to video index using modulo
+                        // Convert actual page index to video index
                         final videoIndex = index % videoController.videos.length;
                         videoController.onVideoIndexChanged(videoIndex);
                       },
                       itemBuilder: (context, index) {
-                        // Use modulo to wrap around to appropriate video
+                        // Map infinite scroll index to actual video index
                         final videoIndex = index % videoController.videos.length;
                         final video = videoController.videos[videoIndex];
                         
                         return VideoPlayerItem(
-                          key: ValueKey('${video.id}_$videoIndex'),
+                          key: ValueKey('video_${video.id}_$index'),
                           video: video,
-                          isPlaying: !_isPageChanging && 
-                              videoIndex == videoController.currentVideoIndex.value,
+                          isPlaying: !_isPageChanging && index == _pageController.page?.round(),
                         );
                       },
                     ),
