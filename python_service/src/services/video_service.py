@@ -7,6 +7,11 @@ import tempfile
 import os
 from .image_processor import ImageProcessor
 from .audio_service import AudioService
+from .text_overlay_service import TextOverlayService
+from ..models.text_overlay import (
+    TextOverlay, TextPosition, TextAlignment,
+    AnimationType, TextStyle, Animation, Templates
+)
 
 class VideoService:
     def __init__(self):
@@ -14,6 +19,7 @@ class VideoService:
         self.db = firestore.client()
         self.image_processor = ImageProcessor()
         self.audio_service = AudioService()
+        self.text_overlay_service = TextOverlayService()
         
     async def generate_video(
         self,
@@ -55,9 +61,44 @@ class VideoService:
             image_urls = properties['images']
             clips = await self.image_processor.create_slides(image_urls, properties)
             
+            # Create text overlays for property details
+            text_overlays = [
+                TextOverlay(
+                    text=properties['title'],
+                    position=TextPosition.TOP,
+                    style=Templates.PROPERTY_TITLE.style,
+                    animation=Animation(type=AnimationType.FADE, duration=1.0),
+                    start_time=0.5
+                ),
+                TextOverlay(
+                    text=f"${properties['price']}",
+                    position=TextPosition.MIDDLE,
+                    style=Templates.PRICE_TAG.style,
+                    animation=Animation(type=AnimationType.SCALE, duration=0.8),
+                    start_time=1.5
+                ),
+                TextOverlay(
+                    text=f"🏠 {properties.get('beds', '')} Beds  🛁 {properties.get('baths', '')} Baths",
+                    position=TextPosition.BOTTOM,
+                    style=Templates.FEATURE_LIST.style,
+                    animation=Animation(type=AnimationType.SLIDE_LEFT, duration=0.8),
+                    start_time=2.5
+                ),
+                TextOverlay(
+                    text=f"📍 {properties['location']}",
+                    position=TextPosition.BOTTOM,
+                    style=Templates.LOCATION.style,
+                    animation=Animation(type=AnimationType.SLIDE_UP, duration=0.8),
+                    start_time=3.5
+                )
+            ]
+            
             # Concatenate clips
-            final_video = mp.concatenate_videoclips(clips)
-            video_duration = final_video.duration
+            base_video = mp.concatenate_videoclips(clips)
+            video_duration = base_video.duration
+            
+            # Apply text overlays
+            final_video = self.text_overlay_service.apply_text_overlays(base_video, text_overlays)
             
             # Handle background music if provided
             audio_clip = None
@@ -84,8 +125,10 @@ class VideoService:
             final_video.write_videofile(
                 temp_output.name,
                 codec='libx264',
+                audio_codec='aac',  # Explicit audio codec
                 audio=bool(audio_clip),  # Only include audio if we have it
-                fps=24
+                fps=24,
+                audio_bitrate='192k'  # Higher quality audio
             )
             
             # Upload to Firebase Storage

@@ -7,13 +7,12 @@ from moviepy.editor import AudioFileClip, vfx
 class AudioService:
     def __init__(self):
         self.default_music_duration = 30  # default duration in seconds
-        self.fade_duration = 3000  # fade duration in milliseconds
 
     def prepare_background_music(
         self,
         music_path: str,
         duration: Optional[float] = None,
-        volume_reduction: float = 0.5  # Now a multiplier between 0 and 1
+        volume_reduction: float = 1.0  # Full volume
     ) -> str:
         """
         Prepare background music for the video by:
@@ -46,10 +45,6 @@ class AudioService:
         
         # Trim to exact duration
         audio = audio.set_duration(target_duration)
-        
-        # Add fade in/out (convert ms to seconds)
-        fade_duration_sec = self.fade_duration / 1000
-        audio = audio.audio_fadein(fade_duration_sec).audio_fadeout(fade_duration_sec)
         
         # Adjust volume
         audio = audio.volumex(volume_reduction)
