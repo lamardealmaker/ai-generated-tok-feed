@@ -1,14 +1,19 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from fastapi import UploadFile
 import moviepy.editor as mp
-from firebase_admin import storage
+from firebase_admin import storage, firestore
 import uuid
 import tempfile
 import os
+from .image_processor import ImageProcessor
+from .audio_service import AudioService
 
 class VideoService:
     def __init__(self):
         self.bucket = storage.bucket()
+        self.db = firestore.client()
+        self.image_processor = ImageProcessor()
+        self.audio_service = AudioService()
         
     async def generate_video(
         self,
@@ -19,7 +24,11 @@ class VideoService:
         Generate a video from property data and optional background music.
         
         Args:
-            properties: Dictionary containing property details
+            properties: Dictionary containing property details including:
+                - images: List[str] of image URLs
+                - title: str
+                - price: str
+                - location: str
             background_music: Optional background music file
         
         Returns:
@@ -29,21 +38,89 @@ class VideoService:
             # Generate a unique ID for this video
             video_id = str(uuid.uuid4())
             
-            # TODO: Implement video generation logic
-            # This will include:
-            # 1. Processing property images
-            # 2. Adding text overlays
-            # 3. Adding transitions
-            # 4. Adding background music if provided
-            # 5. Uploading to Firebase Storage
+            # Create a document in Firestore to track progress
+            self.db.collection('videos').document(video_id).set({
+                'status': 'processing',
+                'created_at': firestore.SERVER_TIMESTAMP,
+                'properties': properties
+            })
+            
+            # Validate required properties
+            required_fields = ['images', 'title', 'price', 'location']
+            missing_fields = [field for field in required_fields if not properties.get(field)]
+            if missing_fields:
+                raise ValueError(f"Missing required properties: {', '.join(missing_fields)}")
+            
+            # Process images into slides with property details
+            image_urls = properties['images']
+            clips = await self.image_processor.create_slides(image_urls, properties)
+            
+            # Concatenate clips
+            final_video = mp.concatenate_videoclips(clips)
+            video_duration = final_video.duration
+            
+            # Handle background music if provided
+            audio_clip = None
+            temp_audio = None
+            
+            if background_music:
+                # Save uploaded music to temporary file
+                temp_audio = tempfile.NamedTemporaryFile(delete=False, suffix='.mp3')
+                temp_audio.write(await background_music.read())
+                temp_audio.close()
+                
+                # Process the background music
+                processed_audio = self.audio_service.prepare_background_music(
+                    temp_audio.name,
+                    duration=video_duration
+                )
+                audio_clip = self.audio_service.create_audio_clip(processed_audio)
+                
+                # Set the audio of the final video
+                final_video = final_video.set_audio(audio_clip)
+            
+            # Save to temporary file
+            temp_output = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
+            final_video.write_videofile(
+                temp_output.name,
+                codec='libx264',
+                audio=bool(audio_clip),  # Only include audio if we have it
+                fps=24
+            )
+            
+            # Upload to Firebase Storage
+            video_path = f"videos/{video_id}/output.mp4"
+            video_url = await self._upload_to_firebase(temp_output.name, video_path)
+            
+            # Update status in Firestore
+            self.db.collection('videos').document(video_id).update({
+                'status': 'completed',
+                'video_url': video_url,
+                'completed_at': firestore.SERVER_TIMESTAMP
+            })
+            
+            # Cleanup
+            os.unlink(temp_output.name)
+            final_video.close()
+            
+            if audio_clip:
+                audio_clip.close()
+                self.audio_service.cleanup_temp_files(temp_audio.name)
             
             return {
                 "video_id": video_id,
-                "status": "processing",
-                "message": "Video generation started"
+                "status": "completed",
+                "video_url": video_url
             }
             
         except Exception as e:
+            # Update error status in Firestore
+            if video_id:
+                self.db.collection('videos').document(video_id).update({
+                    'status': 'error',
+                    'error': str(e),
+                    'completed_at': firestore.SERVER_TIMESTAMP
+                })
             raise Exception(f"Failed to generate video: {str(e)}")
     
     async def get_video_status(self, video_id: str) -> Dict:
@@ -57,16 +134,29 @@ class VideoService:
             Dict containing the status and any available results
         """
         try:
-            # TODO: Implement status checking logic
-            # This will include:
-            # 1. Checking the status in Firestore
-            # 2. Returning the video URL if complete
+            # Get video document from Firestore
+            doc = self.db.collection('videos').document(video_id).get()
             
-            return {
+            if not doc.exists:
+                raise Exception(f"Video with id {video_id} not found")
+                
+            data = doc.to_dict()
+            
+            response = {
                 "video_id": video_id,
-                "status": "pending",
-                "message": "Video generation in progress"
+                "status": data.get('status', 'unknown'),
+                "created_at": data.get('created_at'),
             }
+            
+            # Add additional fields based on status
+            if data.get('status') == 'completed':
+                response["video_url"] = data.get('video_url')
+                response["completed_at"] = data.get('completed_at')
+            elif data.get('status') == 'error':
+                response["error"] = data.get('error')
+                response["completed_at"] = data.get('completed_at')
+                
+            return response
             
         except Exception as e:
             raise Exception(f"Failed to get video status: {str(e)}")
