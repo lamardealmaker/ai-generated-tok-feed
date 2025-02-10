@@ -42,7 +42,7 @@ Run tests:
 pytest
 ```
 
-## API Endpoints
+## API Endpoints. 
 
 ### POST /api/v1/videos/generate
 Generate a new video from property data and optional background music.
