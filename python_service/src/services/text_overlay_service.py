@@ -37,7 +37,15 @@ class TextOverlayService:
         text_width, text_height = text_size
         
         if text_overlay.custom_position:
-            return text_overlay.custom_position
+            custom_x, custom_y = text_overlay.custom_position
+            # For custom positions, still handle text alignment
+            if text_overlay.alignment == TextAlignment.LEFT:
+                x = custom_x
+            elif text_overlay.alignment == TextAlignment.RIGHT:
+                x = custom_x - text_width
+            else:  # CENTER
+                x = custom_x - text_width // 2
+            return (x, custom_y)
             
         # Calculate x position based on alignment
         if text_overlay.alignment == TextAlignment.LEFT:
@@ -47,13 +55,17 @@ class TextOverlayService:
         else:  # CENTER
             x = (frame_width - text_width) // 2
             
-        # Calculate y position based on position type
+        # Calculate y position based on position type, accounting for UI elements
+        top_bar_height = int(frame_height * 0.08)  # ~8% of height for top bar
+        bottom_info_height = int(frame_height * 0.2)  # ~20% of height for property info
+        bottom_nav_height = int(frame_height * 0.1)  # ~10% of height for navigation bar
+        
         if text_overlay.position == TextPosition.TOP:
-            y = 20  # Padding from top
+            y = top_bar_height + 20  # Below top bar with padding
         elif text_overlay.position == TextPosition.MIDDLE:
-            y = (frame_height - text_height) // 2
+            y = (frame_height - text_height - bottom_info_height - bottom_nav_height) // 2 + top_bar_height
         else:  # BOTTOM
-            y = frame_height - text_height - 20  # Padding from bottom
+            y = frame_height - text_height - bottom_info_height - bottom_nav_height - 20  # Above bottom elements with padding
             
         return (x, y)
     
@@ -212,6 +224,11 @@ class TextOverlayService:
         duration: float
     ) -> VideoClip:
         """Create a video clip with animated text overlay"""
+        # Calculate actual duration based on end_time
+        clip_duration = duration
+        if text_overlay.end_time is not None:
+            clip_duration = text_overlay.end_time - text_overlay.start_time
+        
         # Create the base frame with text
         base_frame = self._render_text_frame(
             text_overlay.text,
@@ -223,9 +240,9 @@ class TextOverlayService:
         )
         
         # Create clip from the frame
-        clip = ImageClip(base_frame, duration=duration)
+        clip = ImageClip(base_frame, duration=clip_duration)
         
-        # Apply animation
+        # Apply entrance animation
         if text_overlay.animation.type != AnimationType.NONE:
             clip = self._apply_animation(
                 clip,
@@ -233,6 +250,11 @@ class TextOverlayService:
                 frame_size,
                 text_overlay
             )
+        
+        # Apply fade out at the end
+        if text_overlay.end_time is not None:
+            fade_duration = text_overlay.animation.duration
+            clip = clip.fadeout(fade_duration)
         
         # Set start time
         if text_overlay.start_time > 0:

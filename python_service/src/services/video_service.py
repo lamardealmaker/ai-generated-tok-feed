@@ -61,35 +61,53 @@ class VideoService:
             image_urls = properties['images']
             clips = await self.image_processor.create_slides(image_urls, properties)
             
-            # Create text overlays for property details
+            # Get video dimensions
+            frame_width = clips[0].w
+            frame_height = clips[0].h
+            
+            # Define timing for each section
+            section_duration = 2.0  # Each text shows for 2 seconds
+            fade_duration = 0.5    # Fade in/out takes 0.5 seconds
+            
             text_overlays = [
+                # Title appears first at the top
                 TextOverlay(
                     text=properties['title'],
                     position=TextPosition.TOP,
                     style=Templates.PROPERTY_TITLE.style,
-                    animation=Animation(type=AnimationType.FADE, duration=1.0),
-                    start_time=0.5
+                    animation=Animation(type=AnimationType.FADE, duration=fade_duration),
+                    start_time=0.0,
+                    end_time=section_duration  # Fades out as price appears
                 ),
+                
+                # Price appears second in the middle
                 TextOverlay(
                     text=f"${properties['price']}",
                     position=TextPosition.MIDDLE,
                     style=Templates.PRICE_TAG.style,
-                    animation=Animation(type=AnimationType.SCALE, duration=0.8),
-                    start_time=1.5
+                    animation=Animation(type=AnimationType.SCALE, duration=fade_duration),
+                    start_time=section_duration,
+                    end_time=section_duration * 2
                 ),
+                
+                # Features appear third in the middle-bottom
                 TextOverlay(
                     text=f"🏠 {properties.get('beds', '')} Beds  🛁 {properties.get('baths', '')} Baths",
                     position=TextPosition.BOTTOM,
                     style=Templates.FEATURE_LIST.style,
-                    animation=Animation(type=AnimationType.SLIDE_LEFT, duration=0.8),
-                    start_time=2.5
+                    animation=Animation(type=AnimationType.SLIDE_LEFT, duration=fade_duration),
+                    start_time=section_duration * 2,
+                    end_time=section_duration * 3
                 ),
+                
+                # Location appears last at the bottom
                 TextOverlay(
                     text=f"📍 {properties['location']}",
                     position=TextPosition.BOTTOM,
                     style=Templates.LOCATION.style,
-                    animation=Animation(type=AnimationType.SLIDE_UP, duration=0.8),
-                    start_time=3.5
+                    animation=Animation(type=AnimationType.SLIDE_UP, duration=fade_duration),
+                    start_time=section_duration * 3,
+                    end_time=section_duration * 4
                 )
             ]
             
