@@ -99,20 +99,42 @@ class ReasoningEngine:
                 target_duration=duration
             )
             
-            # 3. Generate effects
+            # 3. Generate effects and transitions
             if progress_callback:
                 progress_callback(0.3, "Generating effects")
                 
-            effects = []
-            for segment in segments:
-                segment_effects = self.effect_agent.generate_effect_combination(
-                    style=style,
-                    content_type=segment.get("content_type", "interior")
+            # Get base effects for the style
+            base_effects = self.video_db_tool.get_effects(
+                template_name=f"{style}_standard",
+                intensity=0.8  # Slightly reduced intensity for better results
+            )
+            
+            # Get transitions (one less than segments since we don't need transition for first)
+            transitions = self.video_db_tool.get_transitions(
+                template_name=f"{style}_standard",
+                count=len(segments) - 1,
+                variation=0.2
+            )
+            
+            # Process each segment with effects and transitions
+            processed_segments = []
+            for i, segment in enumerate(segments):
+                # Don't add transition for first segment
+                transition = None if i == 0 else transitions[i-1]
+                
+                # Process segment
+                processed = self.video_db_tool.process_segment(
+                    segment=segment,
+                    effects=base_effects,
+                    transition=transition
                 )
-                effects.append(segment_effects)
+                processed_segments.append(processed)
+            
+            # Replace segments with processed ones
+            segments = processed_segments
                 
             # Run post-effects hooks
-            await self._run_hooks("post_effects", effects)
+            await self._run_hooks("post_effects", segments)
             
             # 4. Generate voiceovers for each segment
             if progress_callback:
@@ -140,14 +162,6 @@ class ReasoningEngine:
             if progress_callback:
                 progress_callback(0.5, "Processing video")
                 
-            processed_segments = []
-            for segment, effect in zip(segments, effects):
-                processed = self.video_db_tool.process_segment(
-                    segment=segment,
-                    effects=effect
-                )
-                processed_segments.append(processed)
-                
             # 6. Finalize video
             if progress_callback:
                 progress_callback(0.9, "Finalizing video")
@@ -156,15 +170,14 @@ class ReasoningEngine:
                 "session_id": session_id,
                 "style": style,
                 "duration": duration,
-                "segments": processed_segments,
+                "segments": segments,  # Use processed segments
                 "music": music,
-                "effects": effects,
                 "generated_at": datetime.utcnow().isoformat(),
                 "property_id": listing_data.get("id")
             }
             
             # Add image URLs to segments
-            for i, segment in enumerate(processed_segments):
+            for i, segment in enumerate(segments):  # Use processed segments
                 # Cycle through images if we have more segments than images
                 image_index = i % len(image_urls)
                 segment["image_url"] = image_urls[image_index]
@@ -174,7 +187,7 @@ class ReasoningEngine:
                 progress_callback(0.9, "Rendering video")
                 
             output_path = self.video_renderer.render_video(
-                segments=processed_segments,
+                segments=segments,  # Use processed segments
                 music=music
             )
             

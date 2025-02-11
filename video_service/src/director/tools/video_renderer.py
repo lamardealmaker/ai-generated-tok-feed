@@ -44,21 +44,41 @@ class VideoRenderer:
         blob.download_to_filename(temp_path)
         return temp_path
     
-    def apply_effects(self, clip: VideoFileClip, effects: Dict[str, Any]) -> VideoFileClip:
+    def apply_effects(self, clip: VideoFileClip, effects: Dict[str, Any], is_first: bool = False) -> VideoFileClip:
         """Apply video effects to a clip."""
-        # Apply basic effects
-        if "filter" in effects:
-            filter_effect = effects["filter"]
-            if filter_effect["name"] in ["glow", "bloom"]:
-                # Add a slight fade in/out for visual interest
-                clip = clip.fadein(0.5).fadeout(0.5)
-            elif filter_effect["name"] == "blur":
-                # Add a mirror effect instead of blur
-                clip = clip.fx(mp.vfx.mirror_x)
-                
-        # Add a slight zoom for all clips
-        clip = clip.resize(1.1)
+        # Skip effects for first clip
+        if is_first:
+            return clip
+            
+        # Apply color adjustments
+        if "color" in effects:
+            color = effects["color"]
+            if "contrast" in color:
+                clip = clip.fx(mp.vfx.colorx, color["contrast"])
+            if "brightness" in color:
+                clip = clip.fx(mp.vfx.colorx, color["brightness"])
+            if "saturation" in color:
+                clip = clip.fx(mp.vfx.colorx, color["saturation"])
         
+        # Apply filters
+        if "filters" in effects:
+            for filter_name in effects["filters"]:
+                if filter_name == "vibrant":
+                    clip = clip.fx(mp.vfx.colorx, 1.2)
+                elif filter_name == "warm":
+                    clip = clip.fx(mp.vfx.colorx, 1.1)
+                elif filter_name == "cinematic":
+                    clip = clip.fx(mp.vfx.lum_contrast)
+        
+        # Apply transitions if specified
+        if "transition" in effects:
+            transition = effects["transition"]
+            if transition["name"] == "fade":
+                clip = clip.crossfadein(transition["duration"])
+            elif transition["name"] == "slide":
+                # TODO: Implement slide transition
+                pass
+            
         return clip
     
     def create_text_overlay(self, text: str, duration: float, size: int = 30) -> TextClip:
@@ -123,9 +143,10 @@ class VideoRenderer:
             # Set duration
             clip = clip.set_duration(segment["duration"])
             
-            # Apply effects
+            # Apply effects (pass is_first flag)
             if "effects" in segment:
-                clip = self.apply_effects(clip, segment["effects"])
+                is_first = (segment == segments[0])
+                clip = self.apply_effects(clip, segment["effects"], is_first)
             
             # Add text overlay
             if "text" in segment:
@@ -134,8 +155,13 @@ class VideoRenderer:
             
             clips.append(clip)
         
-        # Concatenate all clips
+        # Concatenate all clips with no transitions
         final_clip = mp.concatenate_videoclips(clips, method="compose")
+        
+        # Get total duration from segments
+        total_duration = sum(segment["duration"] for segment in segments)
+        # Ensure final clip duration matches segments
+        final_clip = final_clip.set_duration(total_duration)
         
         # Process audio tracks
         audio_tracks = []
@@ -157,8 +183,16 @@ class VideoRenderer:
         if music and "path" in music:
             try:
                 background_music = AudioFileClip(music["path"])
-                if music.get("loop_count"):
-                    background_music = background_music.loop(music["loop_count"])
+                # Trim or loop music to match video duration
+                total_duration = sum(segment["duration"] for segment in segments)
+                if background_music.duration > total_duration:
+                    background_music = background_music.subclip(0, total_duration)
+                elif background_music.duration < total_duration:
+                    # Calculate how many loops we need
+                    loops_needed = int(total_duration / background_music.duration) + 1
+                    loops = [background_music] * loops_needed
+                    background_music = concatenate_audioclips(loops)
+                    background_music = background_music.subclip(0, total_duration)
                 if music.get("fade_out"):
                     background_music = background_music.audio_fadeout(2)
                 # Lower the volume of background music

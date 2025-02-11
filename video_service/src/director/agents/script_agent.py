@@ -9,46 +9,46 @@ class ScriptAgent(BaseAgent):
         self.script_templates = {
             "modern": {
                 "hooks": [
-                    "You won't believe the views from this {location} home! 🏠✨",
-                    "This {style} home in {location} is a total game-changer! 🔥",
-                    "Wait until you see inside this {price_range} {location} gem! 💎"
+                    "WAIT UNTIL YOU SEE THIS {location} DREAM HOME! 🏠✨",
+                    "THIS {style} HOME IN {location} WILL BLOW YOUR MIND! 🔥",
+                    "INSANE {price_range} PROPERTY ALERT! 🚨 {location} GEM! 💎"
                 ],
                 "features": [
-                    "Check out this stunning {feature}! 😍",
-                    "Love this {feature}! Perfect for {use_case}",
-                    "The {feature} will blow your mind! ✨"
+                    "OBSESSED with this {feature}! 😍",
+                    "THE MOST INCREDIBLE {feature} for {use_case}! 🤯",
+                    "YOU WON'T BELIEVE this {feature}! ✨"
                 ],
                 "closings": [
-                    "DM for details! 📱",
-                    "Book your viewing now! ⭐️",
-                    "Don't miss out on this one! 🏃‍♂️"
+                    "RUN don't walk! DM now! 🏃‍♂️",
+                    "This won't last! Save this! ⭐️",
+                    "Tag someone who needs to see this! 🔥"
                 ]
             },
             "luxury": {
                 "hooks": [
-                    "Presenting an exceptional estate in prestigious {location}",
-                    "Experience unparalleled luxury in {location}",
-                    "Discover refinement in this {style} masterpiece"
+                    "EXCLUSIVE FIRST LOOK: ${price_range} {location} MANSION 👑",
+                    "INSIDE THE MOST STUNNING {location} ESTATE YET! ✨",
+                    "THIS {style} MASTERPIECE WILL LEAVE YOU SPEECHLESS! 🏰"
                 ],
                 "features": [
-                    "Behold the magnificent {feature}, perfect for {use_case}",
-                    "Immerse yourself in this stunning {feature}",
-                    "Indulge in the sophisticated {feature}"
+                    "LOOK AT THIS INCREDIBLE {feature}! Perfect for {use_case} 🤩",
+                    "THE MOST INSANE {feature} you'll ever see! 🔥",
+                    "I CAN'T BELIEVE this {feature}! Absolutely unreal! ✨"
                 ],
                 "closings": [
-                    "Private viewings available",
-                    "Contact for exclusive access",
-                    "Inquire for detailed portfolio"
+                    "Serious inquiries only - DM for private tour 🔑",
+                    "Save this dream home! You won't regret it! ⭐️",
+                    "Like & Share if this is your dream home! 🏠"
                 ]
             },
             "minimal": {
                 "hooks": [
-                    "Modern living in {location}",
-                    "Thoughtfully designed {style} home",
-                    "Contemporary comfort in {location}"
+                    "THIS {location} GEM IS EVERYTHING! ✨",
+                    "PERFECTLY DESIGNED {style} HOME! 🏠",
+                    "THE MOST AESTHETIC {location} FIND! 🎯"
                 ],
                 "features": [
-                    "Featuring a {feature} for {use_case}",
+                    "OBSESSED with this {feature} for {use_case}! 😍",
                     "Clean lines define this {feature}",
                     "Smart design in the {feature}"
                 ],
