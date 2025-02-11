@@ -111,12 +111,44 @@ class VideoService:
                 )
             ]
             
-            # Concatenate clips
-            base_video = mp.concatenate_videoclips(clips)
+            # Apply transitions between clips
+            from .transitions import TransitionEffects
+            
+            # Add slide transitions between clips
+            final_clips = []
+            for i in range(len(clips)):
+                # Apply Ken Burns effect to each clip
+                clip = TransitionEffects.ken_burns_effect(
+                    clips[i],
+                    zoom_range=(1.0, 1.15),  # Subtle zoom
+                    pan_range=((0, 0), (0.05, 0.05))  # Subtle pan
+                )
+                
+                # Add slide transition between clips
+                if i > 0:
+                    transition = TransitionEffects.slide_transition(
+                        final_clips[-1],
+                        clip,
+                        direction='left' if i % 2 == 0 else 'right',
+                        duration=0.8
+                    )
+                    final_clips.append(transition)
+                final_clips.append(clip)
+            
+            # Concatenate all clips with transitions
+            base_video = mp.concatenate_videoclips(final_clips)
             video_duration = base_video.duration
             
             # Apply text overlays
             final_video = self.text_overlay_service.apply_text_overlays(base_video, text_overlays)
+            
+            # Add progress bar
+            final_video = TransitionEffects.progress_bar(
+                final_video,
+                color=(255, 255, 255),  # White bar
+                height=4,  # 4 pixels high
+                opacity=0.8
+            )
             
             # Handle background music if provided
             audio_clip = None

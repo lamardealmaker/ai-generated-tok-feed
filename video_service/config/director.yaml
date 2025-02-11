@@ -1,0 +1,35 @@
+# Main director configuration
+version: 1.0
+
+# Video generation settings
+video:
+  default_duration: 30.0  # Default video duration in seconds
+  min_duration: 15.0     # Minimum video duration
+  max_duration: 120.0    # Maximum video duration
+  default_fps: 30       # Default frames per second
+  output_format: "mp4"  # Output video format
+  resolution:
+    width: 1920
+    height: 1080
+
+# Scene generation
+scenes:
+  min_duration: 3.0     # Minimum scene duration
+  max_duration: 10.0    # Maximum scene duration
+  transition_duration: 1.0  # Default transition duration
+
+# Audio settings
+audio:
+  sample_rate: 44100
+  channels: 2
+  format: "wav"
+  music:
+    fade_in: 2.0
+    fade_out: 3.0
+    volume: 0.5
+
+# Processing
+processing:
+  max_concurrent_tasks: 4
+  temp_dir: "/tmp/video_service/processing"
+  output_dir: "/tmp/video_service/output"

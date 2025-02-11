@@ -1,0 +1,35 @@
+{
+  "status": "completed",
+  "progress": 100,
+  "start_time": "2025-02-10 23:34:50.737824+00:00",
+  "template": "modern_rapid_standard_vibrant",
+  "result_url": "https://storage.example.com/videos/modern_rapid_standard_vibrant.mp4",
+  "error": null,
+  "request": {
+    "listing": {
+      "title": "Beautiful Modern Home",
+      "price": 750000.0,
+      "description": "Stunning 4-bedroom modern home with amazing views",
+      "features": [
+        "Open floor plan",
+        "Gourmet kitchen",
+        "Master suite"
+      ],
+      "location": "123 Main St, Anytown, USA",
+      "specs": {
+        "bedrooms": 4,
+        "bathrooms": 3.5,
+        "square_feet": 3200,
+        "lot_size": "0.5 acres",
+        "year_built": 2020,
+        "property_type": "Single Family"
+      }
+    },
+    "images": [
+      "https://example.com/image1.jpg",
+      "https://example.com/image2.jpg",
+      "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+    ]
+  },
+  "completion_time": "2025-02-10 23:34:50.739494+00:00"
+}

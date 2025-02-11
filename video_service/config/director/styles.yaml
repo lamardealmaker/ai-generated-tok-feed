@@ -1,0 +1,48 @@
+# Style presets for video generation
+version: 1.0
+
+# Default style settings
+default:
+  transition_type: "fade"
+  color_scheme: "neutral"
+  text_style: "modern"
+  animation_speed: "medium"
+
+# Style presets
+styles:
+  modern:
+    transition_type: "slide"
+    color_scheme: "monochrome"
+    text_style: "minimal"
+    animation_speed: "fast"
+    
+  luxury:
+    transition_type: "fade"
+    color_scheme: "gold"
+    text_style: "elegant"
+    animation_speed: "slow"
+    
+  cozy:
+    transition_type: "dissolve"
+    color_scheme: "warm"
+    text_style: "casual"
+    animation_speed: "medium"
+
+# Variation settings
+variations:
+  enabled: true
+  strength_range:
+    min: 0.1
+    max: 0.5
+    default: 0.3
+  
+  parameters:
+    transition_duration:
+      range: [0.5, 2.0]
+      weight: 1.0
+    color_intensity:
+      range: [0.8, 1.2]
+      weight: 0.8
+    animation_timing:
+      range: [0.7, 1.3]
+      weight: 0.6
