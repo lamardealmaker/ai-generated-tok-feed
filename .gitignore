@@ -23,6 +23,8 @@ wheels/
 # Environment variables and secrets
 .env
 *.env
+**/.env.*
+!**/.env.example
 python_service/.env
 **/firebase-service-account.json
 
