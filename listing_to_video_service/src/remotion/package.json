@@ -1,0 +1,25 @@
+{
+  "name": "property-video",
+  "version": "1.0.0",
+  "description": "Real estate property video generator",
+  "scripts": {
+    "start": "remotion preview",
+    "build": "remotion render PropertyVideo out/video.mp4",
+    "upgrade": "remotion upgrade",
+    "test": "eslint src --ext ts,tsx,js,jsx && tsc"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "@remotion/composition": "^4.0.0",
+    "@remotion/renderer": "^4.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "remotion": "^4.0.0",
+    "styled-components": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.0",
+    "@types/styled-components": "^5.1.0",
+    "typescript": "^5.0.0"
+  }
+}
