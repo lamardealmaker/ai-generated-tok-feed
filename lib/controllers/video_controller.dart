@@ -37,6 +37,12 @@ class VideoController extends GetxController {
   // Getter for active controller map
   Map<String, VideoPlayerController> get _videoControllers => 
       isTrendingSelected.value ? _trendingControllers : _forYouControllers;
+      
+  // Track the currently playing video
+  String? _currentlyPlayingId;
+  
+  // Preload flag
+  bool _isPreloading = false;
 
   @override
   void onInit() {
@@ -140,11 +146,16 @@ class VideoController extends GetxController {
 
   Future<void> switchTab(bool toTrending) async {
     _isTabChanging.value = true;
-    // Pause current video before switching
+    
+    // Pause and cleanup current video before switching
     final currentVideoId = videos[currentVideoIndex.value].id;
     final currentController = _videoControllers[currentVideoId];
-    if (currentController?.value.isPlaying ?? false) {
-      await currentController?.pause();
+    if (currentController != null) {
+      if (currentController.value.isPlaying) {
+        await currentController.pause();
+      }
+      await currentController.dispose();
+      _videoControllers.remove(currentVideoId);
     }
 
     isTrendingSelected.value = toTrending;
@@ -185,7 +196,15 @@ class VideoController extends GetxController {
     }
   }
 
-  void onVideoIndexChanged(int index) {
+  void onVideoIndexChanged(int index) async {
+    if (index < 0 || index >= videos.length) return;
+    
+    // Pause current video before switching
+    final currentVideo = videos[currentVideoIndex.value];
+    if (_videoControllers.containsKey(currentVideo.id)) {
+      await _videoControllers[currentVideo.id]?.pause();
+    }
+    
     // Update indices
     if (isTrendingSelected.value) {
       trendingIndex.value = index;
@@ -194,69 +213,87 @@ class VideoController extends GetxController {
     }
     currentVideoIndex.value = index;
     
-    // Initialize current video if not already initialized
-    _initializeVideoController(videos[index], index);
+    // Initialize current video
+    await _initializeVideoController(videos[index], index);
     
-    // Pre-initialize next video
-    _initializeVideoController(
-      videos[(index + 1) % videos.length],
-      (index + 1) % videos.length
-    );
+    // Pre-initialize adjacent videos
+    if (index > 0) {
+      _initializeVideoController(videos[index - 1], index - 1);
+    }
+    if (index < videos.length - 1) {
+      _initializeVideoController(videos[index + 1], index + 1);
+    }
     
     // Clean up videos that are no longer needed
-    _cleanupUnusedControllers();
+    await _cleanupUnusedControllers();
   }
 
-  void _cleanupUnusedControllers() {
+  Future<void> _cleanupUnusedControllers() async {
     final keysToKeep = <String>{};
     final currentIndex = currentVideoIndex.value;
     
-    // Keep current video
+    // Keep only adjacent videos
     keysToKeep.add(videos[currentIndex].id);
-    
-    // Keep previous video
     if (currentIndex > 0) {
       keysToKeep.add(videos[currentIndex - 1].id);
-    } else {
-      // If we're at the first video, keep the last video
-      keysToKeep.add(videos[videos.length - 1].id);
+    }
+    if (currentIndex < videos.length - 1) {
+      keysToKeep.add(videos[currentIndex + 1].id);
     }
     
-    // Keep next video
-    keysToKeep.add(videos[(currentIndex + 1) % videos.length].id);
-    
-    // Remove controllers that are no longer needed
-    _videoControllers.removeWhere((key, _) => !keysToKeep.contains(key));
+    // Remove and dispose controllers that are no longer needed
+    final keysToRemove = _videoControllers.keys.where((key) => !keysToKeep.contains(key)).toList();
+    for (final key in keysToRemove) {
+      final controller = _videoControllers[key];
+      if (controller != null) {
+        await controller.pause();
+        await controller.dispose();
+        _videoControllers.remove(key);
+      }
+    }
   }
 
   Future<void> _initializeVideoController(VideoModel video, int index) async {
+    // If controller exists and is initialized, handle playback state
     if (_videoControllers.containsKey(video.id)) {
       final controller = _videoControllers[video.id]!;
       if (controller.value.isInitialized) {
-        // If it's the current video, ensure it starts playing
         if (index == currentVideoIndex.value && !_isTabChanging.value) {
+          // Only play if this is the current video and we're not changing tabs
+          if (controller.value.isPlaying) {
+            await controller.pause();
+          }
           await controller.seekTo(Duration.zero);
           await controller.play();
+        } else {
+          // Ensure non-current videos are paused
+          if (controller.value.isPlaying) {
+            await controller.pause();
+          }
         }
         return;
       }
     }
 
     try {
-      final controller = VideoPlayerController.network(video.videoUrl);
+      final controller = VideoPlayerController.network(
+        video.videoUrl,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
+      );
       _videoControllers[video.id] = controller;
       
       await controller.initialize();
       controller.setLooping(false);
-      
-      // Set volume and play if it's the current video
       await controller.setVolume(1.0);
+      
+      // Only play if this is the current video and we're not changing tabs
       if (index == currentVideoIndex.value && !_isTabChanging.value) {
         await controller.play();
       }
     } catch (e) {
       print('Error initializing video ${video.id}: $e');
       if (_videoControllers.containsKey(video.id)) {
+        await _videoControllers[video.id]?.dispose();
         _videoControllers.remove(video.id);
       }
     }

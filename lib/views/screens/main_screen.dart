@@ -29,7 +29,16 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  final VideoController videoController = Get.find<VideoController>();
+
   void _onItemTapped(int index) {
+    // Pause video if leaving home screen
+    if (_selectedIndex == 0 && index != 0) {
+      final currentVideoId = videoController.videos[videoController.currentVideoIndex.value].id;
+      final currentController = videoController.getController(currentVideoId);
+      currentController?.pause();
+    }
+
     setState(() {
       _selectedIndex = index;
     });

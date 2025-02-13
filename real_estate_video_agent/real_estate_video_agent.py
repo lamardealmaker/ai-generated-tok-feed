@@ -81,14 +81,15 @@ class ZapCapClient:
         """Create a video task with custom render options"""
         # List of pastel and bright colors
         colors = [
+            '#FF2C55',  # TikTok Red
+            '#00F2EA',  # TikTok Cyan
+            '#FE2C55',  # Vibrant Pink
+            '#25F4EE',  # Bright Cyan
             '#FFFFFF',  # White
-            '#FFFF00',  # Yellow
-            '#FFE5E5',  # Pastel Pink
-            '#E5FFE5',  # Pastel Green
-            '#E5E5FF',  # Pastel Blue
-            '#FFFFE5',  # Pastel Yellow
-            '#FFE5FF',  # Pastel Purple
-            '#E5FFFF',  # Pastel Cyan
+            '#F5E642',  # Bright Yellow
+            '#69C9D0',  # Light Blue
+            '#EE1D52',  # Deep Pink
+            '#000000',  # Black (for light backgrounds)
         ]
         
         # Default render options with randomization
@@ -235,25 +236,26 @@ class RealEstateVideoAgent:
     def generate_script(self, property_details: Dict) -> str:
         """Generate an engaging TikTok-style script for the property."""
         prompt = f"""Write a short, factual script (maximum 15 seconds when read at a natural pace) for this property:
-        Address: {property_details['address']}
+        Address: {property_details['address']}, {property_details['city']}, {property_details['state']}
         Price: ${property_details['price']:,}
         Bedrooms: {property_details['beds']}
         Bathrooms: {property_details['baths']}
         Square Feet: {property_details['sqft']}
+        Key Features: {', '.join(property_details.get('features', []))}
         Description: {property_details['description']}
         
-        take the description and use that to create a BRIEF factual script. highlighting the 
-        selling points. do not add hyperbole or calls to action if not in property description.
+        take the description and features to create a BRIEF factual script. highlighting the 
+        selling points and key features. do not add hyperbole or calls to action if not in property description.
         script needs to be able to be read in 10-15 seconds at a natural pace. If too long you will
         cause errors. 
         Every word in script will be read so do not
         add any information that is not to be read aloud. Spell out all abreviations and acronyms.
         
         IMPORTANT: Keep the script very concise. It should take no more than 10 seconds to read at a natural pace.
-        Focus on the most important details only."""
+        Focus on the most important details and unique features only."""
         
         response = openai_client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4",
             messages=[{"role": "user", "content": prompt}]
         )
         
@@ -497,30 +499,68 @@ class RealEstateVideoAgent:
 
 
 
+    def generate_features(self, property_details: Dict) -> List[str]:
+        """Generate 3-5 key features for the property using OpenAI."""
+        try:
+            # Create a prompt for OpenAI
+            prompt = f"Given a ${property_details['price']:,} property in {property_details['city']}, {property_details['state']} "
+            prompt += f"with {property_details['beds']} beds, {property_details['baths']} baths, and {property_details['sqft']} square feet, "
+            prompt += f"and this description: {property_details['description']}, "
+            prompt += "list 3-5 key features that would be most appealing to potential buyers. Each feature should be short and less than 3 words. "
+            prompt += "Return only the feature names, separated by commas, no explanations or additional text."
+
+            # Call OpenAI
+            response = openai_client.chat.completions.create(
+                model="gpt-4",
+                messages=[{
+                    "role": "system",
+                    "content": "You are a real estate expert. List only the features, no explanations."
+                }, {
+                    "role": "user",
+                    "content": prompt
+                }],
+                temperature=0.7,
+                max_tokens=100
+            )
+
+            # Parse the response
+            features_text = response.choices[0].message.content.strip()
+            features = [feature.strip() for feature in features_text.split(',')]
+            return features
+
+        except Exception as e:
+            print(f"Error generating features: {str(e)}")
+            return ["Spacious Layout", "Modern Amenities", "Prime Location"]  # Default fallback
+
     def create_property_video(self, property_details: Dict, images: List[str]) -> str:
         """Create complete TikTok-style real estate video."""
-        # Generate script
-        script = self.generate_script(property_details)
-        
-        # Generate voiceover with word timings
-        audio_path, word_timings = self.generate_voiceover(script)
-        
-        # Create base video with effects
-        video = self.create_video_clip(images, audio_path)
-        
-        # Save temporary video without captions
-        temp_path = self.temp_dir / f"temp_{uuid.uuid4()}.mp4"
-        video.write_videofile(
-            str(temp_path),
-            fps=30,
-            codec='libx264',
-            audio_codec='aac',
-            preset='medium',
-            threads=2
-        )
-        video.close()
-        
         try:
+            # Generate features first
+            features = self.generate_features(property_details)
+            property_details['features'] = features
+            print(f"Generated features: {features}")
+
+            # Generate script
+            script = self.generate_script(property_details)
+            
+            # Generate voiceover with word timings
+            audio_path, word_timings = self.generate_voiceover(script)
+            
+            # Create base video with effects
+            video = self.create_video_clip(images, audio_path)
+            
+            # Save temporary video without captions
+            temp_path = self.temp_dir / f"temp_{uuid.uuid4()}.mp4"
+            video.write_videofile(
+                str(temp_path),
+                fps=30,
+                codec='libx264',
+                audio_codec='aac',
+                preset='medium',
+                threads=2
+            )
+            video.close()
+        
             # Upload video to ZapCap
             print("Uploading video to ZapCap...")
             video_id = zapcap_client.upload_video(str(temp_path))
@@ -539,13 +579,7 @@ class RealEstateVideoAgent:
                     'top': random.choice([45, 50, 75]),
                     'fontUppercase': random.choice([True, False]),
                     'fontSize': random.randint(20, 50),
-                    'fontWeight': random.randint(300, 750),
-                    'fontColor': random.choice(self.font_colors)
-                },
-                'highlightOptions': {
-                    'randomColourOne': random.choice(self.font_colors),
-                    'randomColourTwo': random.choice(self.font_colors),
-                    'randomColourThree': random.choice(self.font_colors)
+                    'fontWeight': random.randint(300, 750)
                 }
             }
             
@@ -573,13 +607,25 @@ class RealEstateVideoAgent:
             
             return str(output_path)
             
+        except Exception as e:
+            print(f"Error creating property video: {str(e)}")
+            raise
         finally:
             # Cleanup
-            if temp_path.exists():
-                temp_path.unlink()
-            os.remove(audio_path)
+            try:
+                if 'temp_path' in locals() and temp_path.exists():
+                    temp_path.unlink()
+                if 'audio_path' in locals():
+                    os.remove(audio_path)
+            except Exception as e:
+                print(f"Error during cleanup: {str(e)}")
 
 def main():
+    from firebase_utils import init_firebase, save_to_videos_collection
+    
+    # Initialize Firebase
+    db, bucket = init_firebase()
+    
     st.title("🏠 Real Estate TikTok Video Generator")
     
     # Property details input methods
@@ -591,14 +637,36 @@ def main():
     if input_method == "Form":
         # Property details form
         st.header("Property Details")
-        default_description = """Luxury Living at Zilkr On The Park Condos! Rare, sun drenched, corner One Bedroom Plus Den floor plan with coveted southwest facing views overlooking Zilker Park, Barton Creek and rooftop Pool. Live your best life with the Hike & Bike Trail only steps from the building, and enjoy easy access to downtown, SoCo, Mopac, and I35. Enjoy the perks of living on Zilker Park, host to the world-famous ACL music festival, Blues On The Green, Barton Springs Pool, Kite Festival, and the Trail of Lights. This Corner unit is modern and private, with elegant finishes throughout, luxury vinyl wood floors throughout, and a large extended balcony to entertain your friends while enjoying the views. Luxury amenities include a modern fitness center, lounge pool, poolside fire pit & gas bbq grills, trailside covered porch with picnic tables, and a well-appointed owner's lounge with flat-screen TVs, billiards table, and entertaining space for up to 50 people. This condo comes with an assigned parking spot. A second parking spot and climate controlled storage unit also negotiable. Park-facing condos in this building rarely become available so don't miss out! Text or call Joanne to schedule a showing today!"""
+        default_description = """Luxury Living at Zilkr On The Park Condos! Rare, sun drenched, corner One Bedroom Plus Den floor plan with coveted southwest facing views overlooking Zilker Park, Barton Creek and rooftop Pool. Live your best life with the Hike & Bike Trail only steps from the building, and enjoy easy access to downtown, SoCo, Mopac, and I35."""
         
-        address = st.text_input("Address", value="1900 Barton Springs Rd, Austin, TX 78704")
-        price = st.number_input("Price", min_value=0, value=599000, step=1000)
-        beds = st.number_input("Bedrooms", min_value=1, value=1, step=1)
-        baths = st.number_input("Bathrooms", min_value=1.0, value=1.0, step=0.5)
-        sqft = st.number_input("Square Feet", min_value=100, value=850, step=100)
-        description = st.text_area("Property Description", value=default_description)
+        # Basic Property Information
+        st.subheader("Basic Information")
+        col1, col2 = st.columns(2)
+        with col1:
+            address = st.text_input("Street Address", value="1900 Barton Springs Rd")
+            city = st.text_input("City", value="Austin")
+            state = st.text_input("State", value="TX")
+            zip_code = st.text_input("ZIP Code", value="78704")
+        
+        with col2:
+            price = st.number_input("Price", min_value=0, value=599000, step=1000)
+            beds = st.number_input("Bedrooms", min_value=0, value=3, step=1)
+            baths = st.number_input("Bathrooms", min_value=0.0, value=2.0, step=0.5)
+            sqft = st.number_input("Square Feet", min_value=0, value=2000, step=100)
+        
+        # Property Description
+        st.subheader("Description")
+        description = st.text_area("Property Description", value=default_description, height=100)
+        
+        # Features will be generated automatically
+        
+        # Agent Information
+        st.subheader("Agent Information")
+        col3, col4 = st.columns(2)
+        with col3:
+            agent_name = st.text_input("Agent Name")
+        with col4:
+            agent_company = st.text_input("Agency Name")
         
         # Image upload
         st.header("Property Images")
@@ -614,19 +682,35 @@ def main():
             temp_dir = Path("temp")
             temp_dir.mkdir(exist_ok=True)
             
-            for file in uploaded_files:
-                temp_path = temp_dir / file.name
+            # Clear any existing image files
+            for f in temp_dir.glob("*.jpg"):
+                f.unlink()
+            for f in temp_dir.glob("*.jpeg"):
+                f.unlink()
+            for f in temp_dir.glob("*.png"):
+                f.unlink()
+            
+            # Save new images
+            for idx, file in enumerate(uploaded_files):
+                file_ext = Path(file.name).suffix
+                temp_path = temp_dir / f"image_{idx}{file_ext}"
                 with open(temp_path, "wb") as f:
                     f.write(file.getvalue())
                 image_paths.append(str(temp_path))
                 
             property_details = {
                 "address": address,
+                "city": city,
+                "state": state,
+                "zip_code": zip_code,
                 "price": price,
                 "beds": beds,
                 "baths": baths,
                 "sqft": sqft,
-                "description": description
+                "description": description,
+                "agent_name": agent_name,
+                "agent_company": agent_company,
+                "userId": "test_user"  # Default user ID
             }
     
     else:  # JSON input
@@ -686,15 +770,14 @@ def main():
                 agent = RealEstateVideoAgent()
                 video_path = agent.create_property_video(property_details, image_paths)
                 
-                # Cleanup temporary images
-                for path in image_paths:
-                    try:
-                        os.remove(path)
-                    except:
-                        pass
+                # Save to Firebase
+                video_id = save_to_videos_collection(db, bucket, property_details, video_path, image_paths)
                 
-                st.success("✨ Video created successfully!")
+                st.success("✨ Video created and saved successfully!")
                 st.video(video_path)
+                
+                # Show Firebase details
+                st.info(f"Video saved to Firebase with ID: {video_id}")
                 
                 # Download button
                 with open(video_path, "rb") as file:
@@ -704,6 +787,13 @@ def main():
                         file_name=os.path.basename(video_path),
                         mime="video/mp4"
                     )
+                    
+                # Cleanup temporary images after everything is done
+                for path in image_paths:
+                    try:
+                        os.remove(path)
+                    except:
+                        pass
             except Exception as e:
                 st.error(f"Error creating video: {str(e)}")
                 # Cleanup on error

@@ -12,7 +12,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final VideoController videoController = Get.put(VideoController());
   late PageController _pageController;
   late AnimationController _fadeController;
@@ -23,8 +23,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initPageController();
     _initAnimationController();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      // Pause video when app goes to background
+      final currentVideoId = videoController.videos[videoController.currentVideoIndex.value].id;
+      final currentController = videoController.getController(currentVideoId);
+      currentController?.pause();
+    }
   }
 
   void _initPageController() {
@@ -49,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     _fadeController.dispose();
     super.dispose();

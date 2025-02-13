@@ -52,16 +52,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => Get.back(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: AppColors.accent),
-            onPressed: _loadFavorites,
-          ),
-        ],
+        automaticallyImplyLeading: false,
         elevation: 0,
       ),
       body: Obx(
@@ -171,7 +162,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     if (mainIndex != -1) {
                       videoController.currentVideoIndex.value = mainIndex;
                       // Navigate to main screen
-                      Get.offAllNamed('/');
+                      Get.offAllNamed('/home');
                     } else {
                       Get.snackbar(
                         'Error',

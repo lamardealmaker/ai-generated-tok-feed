@@ -7,7 +7,7 @@ import '../../controllers/video_controller.dart';
 import '../../models/comment_model.dart';
 import '../../models/property_details.dart';
 import '../../constants.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import 'video_interaction_button.dart';
 import 'video_progress_bar.dart';
 
@@ -660,10 +660,13 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                     CircleAvatar(
                       radius: 24,
                       backgroundColor: AppColors.darkGrey,
-                      child: Icon(
-                        Icons.person,
-                        color: AppColors.accent,
-                        size: 24,
+                      child: Text(
+                        property.agentName.isNotEmpty ? property.agentName[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                          color: AppColors.accent,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -672,7 +675,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'John Smith',
+                            property.agentName,
                             style: const TextStyle(
                               color: AppColors.white,
                               fontSize: 16,
@@ -680,7 +683,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                             ),
                           ),
                           Text(
-                            'Premier Real Estate',
+                            property.agencyName,
                             style: TextStyle(
                               color: AppColors.white.withOpacity(0.7),
                               fontSize: 14,
@@ -689,60 +692,11 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
                         ],
                       ),
                     ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final Uri phoneUri = Uri.parse('tel:+15555550123');
-                        if (await canLaunchUrl(phoneUri)) {
-                          await launchUrl(phoneUri);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: AppColors.buttonText,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Contact Agent',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
 
-                // Contact Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.buttonText,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      // Handle contact agent
-                    },
-                    child: const Text(
-                      'Contact Agent',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
+
               ],
             ),
           ),
