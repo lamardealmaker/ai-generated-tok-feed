@@ -187,12 +187,37 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
               children: [
                 if (widget.video.propertyDetails != null) ...[
                   // Price
-                  Text(
-                    widget.video.propertyDetails!.formattedPrice,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.accent,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.darkGrey.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.accent.withOpacity(0.3),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      widget.video.propertyDetails!.formattedPrice,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 2,
+                            color: Color(0x40000000),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -245,16 +270,17 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
             children: [
               // Like Button
               Obx(() => VideoInteractionButton(
-                icon: widget.video.isLiked.value ? Icons.favorite : Icons.favorite_border,
+                icon: widget.video.isLiked.value ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
                 count: widget.video.likes.toString(),
                 onPressed: () => videoController.likeVideo(widget.video.id),
                 isSelected: widget.video.isLiked.value,
+                activeColor: AppColors.heart,
               )),
               const SizedBox(height: 4),
 
               // Comment Button
               VideoInteractionButton(
-                icon: Icons.comment,
+                icon: Icons.chat_bubble_outline_rounded,
                 count: widget.video.comments.toString(),
                 onPressed: () => _showCommentsSheet(context),
               ),
@@ -262,7 +288,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
 
               // Share Button
               VideoInteractionButton(
-                icon: Icons.share,
+                icon: Icons.share_rounded,
                 count: widget.video.shares.toString(),
                 onPressed: () => videoController.shareVideo(widget.video.id),
               ),
@@ -270,7 +296,7 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
 
               // Property Info Button
               VideoInteractionButton(
-                icon: Icons.info_outline,
+                icon: Icons.info_outline_rounded,
                 count: 'Info',
                 onPressed: () => _showPropertySheet(context),
               ),
@@ -278,10 +304,11 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
 
               // Favorite Button
               Obx(() => VideoInteractionButton(
-                icon: widget.video.isFavorite.value ? Icons.bookmark : Icons.bookmark_border,
+                icon: widget.video.isFavorite.value ? Icons.bookmark_rounded : Icons.bookmark_outline_rounded,
                 count: 'Save',
                 onPressed: () => videoController.toggleFavorite(widget.video.id),
                 isSelected: widget.video.isFavorite.value,
+                activeColor: AppColors.accent,
               )),
             ],
           ),
@@ -567,12 +594,30 @@ class _VideoPlayerItemState extends State<VideoPlayerItem> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Price Section
-                Text(
-                  property.formattedPrice,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.accent,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.accent.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    property.formattedPrice,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.accent,
+                      shadows: const [
+                        Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 2,
+                          color: Color(0x40000000),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),

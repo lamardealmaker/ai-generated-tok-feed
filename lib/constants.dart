@@ -2,18 +2,38 @@ import 'package:flutter/material.dart';
 
 // App theme colors
 class AppColors {
-  static const Color primary = Color(0xFF121212);
-  static const Color accent = Color(0xFF00FF91);    // Mint green - main brand color
-  static const Color heart = Color(0xFFFF4D8D);     // Soft pink - for likes
-  static const Color save = Color(0xFF7B61FF);      // Indigo - for bookmarks
-  static const Color error = Color(0xFFFF0000);     // Keep red for errors only
-  static const Color secondary = Color(0xFFE8E8E8);
-  static const Color background = Color(0xFF000000);
-  static const Color darkGrey = Color(0xFF121212);
-  static const Color grey = Color(0xFF757575);
-  static const Color white = Color(0xFFFFFFFF);
-  static const Color black = Color(0xFF000000);
-  static const Color buttonText = Color(0xFF000000); // Black text for buttons
+  // Primary Colors
+  static const Color primary = Color(0xFF1E2A39);    // Deep navy
+  static const Color accent = Color(0xFF64B6AC);     // Muted teal
+  static const Color background = Color(0xFF121417); // Soft black
+  static const Color secondary = Color(0xFF4A90E2);  // Ocean blue (same as save for consistency)
+  
+  // Interactive Colors
+  static const Color heart = Color(0xFFE76F51);      // Coral
+  static const Color save = Color(0xFF4A90E2);       // Ocean blue
+  
+  // Neutral Colors
+  static const Color grey = Color(0xFF9BA0A8);       // Warm grey
+  static const Color lightGrey = Color(0xFFE5E9F0);  // Light warm grey
+  static const Color darkGrey = Color(0xFF2C3440);   // Dark warm grey
+  
+  // Text Colors
+  static const Color textPrimary = Color(0xFFF5F7FA);// Off-white
+  static const Color textSecondary = Color(0xFFB0B7C3);// Muted text
+  static const Color white = Color(0xFFFFFFFF);      // Pure white for contrast
+  static const Color black = Color(0xFF000000);      // Pure black for contrast
+  
+  // Status Colors
+  static const Color success = Color(0xFF34C759);    // Apple green
+  static const Color error = Color(0xFFFF3B30);      // Soft red
+  
+  // Button Colors
+  static const Color buttonText = Color(0xFF1E2A39); // Deep navy for button text
+  static const Color buttonBackground = Color(0xFF64B6AC); // Muted teal for buttons
+  
+  // Overlay Colors
+  static const Color overlay = Color(0x80000000);    // 50% black
+  static const Color glassOverlay = Color(0x0DFFFFFF);// Subtle white
 }
 
 // Material design constants

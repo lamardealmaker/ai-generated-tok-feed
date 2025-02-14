@@ -308,7 +308,7 @@ class VideoController extends GetxController {
   Future<void> likeVideo(String videoId) async {
     try {
       if (_auth.currentUser == null) {
-        Get.snackbar('Error', 'Please sign in to like videos', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.white);
+        Get.snackbar('Error', 'Please sign in to like videos', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.textPrimary);
         return;
       }
 
@@ -341,7 +341,7 @@ class VideoController extends GetxController {
   Future<void> toggleFavorite(String videoId) async {
     try {
       if (_auth.currentUser == null) {
-        Get.snackbar('Error', 'Please sign in to favorite videos', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.white);
+        Get.snackbar('Error', 'Please sign in to favorite videos', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.textPrimary);
         return;
       }
 
@@ -361,7 +361,7 @@ class VideoController extends GetxController {
           'timestamp': FieldValue.serverTimestamp(),
         });
         video.isFavorite.value = true;
-        Get.snackbar('Success', 'Added to favorites', backgroundColor: AppColors.save.withOpacity(0.8), colorText: AppColors.white);
+        Get.snackbar('Success', 'Added to favorites', backgroundColor: AppColors.success.withOpacity(0.8), colorText: AppColors.textPrimary);
       } else {
         // Remove from favorites
         await favoriteRef.delete();
@@ -369,7 +369,7 @@ class VideoController extends GetxController {
       }
     } catch (e) {
       print('Error toggling favorite: $e');
-      Get.snackbar('Error', 'Failed to update favorites', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.white);
+      Get.snackbar('Error', 'Failed to update favorites', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.textPrimary);
     }
   }
 
@@ -404,7 +404,7 @@ ${property.squareFeet} sq ft
       }
     } catch (e) {
       print('Error sharing video: $e');
-      Get.snackbar('Error', 'Failed to share video', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.white);
+      Get.snackbar('Error', 'Failed to share video', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.textPrimary);
     }
   }
 
@@ -435,7 +435,7 @@ ${property.squareFeet} sq ft
 
   Future<void> addComment(String videoId, String text) async {
     if (_auth.currentUser == null) {
-      Get.snackbar('Error', 'Please login to comment', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.white);
+      Get.snackbar('Error', 'Please login to comment', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.textPrimary);
       return;
     }
 
@@ -475,7 +475,7 @@ ${property.squareFeet} sq ft
       await batch.commit();
     } catch (e) {
       print('Error adding comment: $e');
-      Get.snackbar('Error', 'Failed to add comment', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.white);
+      Get.snackbar('Error', 'Failed to add comment', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.textPrimary);
     }
   }
 
@@ -508,7 +508,7 @@ ${property.squareFeet} sq ft
       return favoriteVideos;
     } catch (e) {
       print('Error loading favorite videos: $e');
-      Get.snackbar('Error', 'Failed to load favorites', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.white);
+      Get.snackbar('Error', 'Failed to load favorites', backgroundColor: AppColors.error.withOpacity(0.8), colorText: AppColors.textPrimary);
       return [];
     }
   }

@@ -73,12 +73,30 @@ class VideoGridItem extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Price
-                  Text(
-                    video.propertyDetails!.formattedPrice,
-                    style: const TextStyle(
-                      color: AppColors.accent,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.darkGrey.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: AppColors.accent.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      video.propertyDetails!.formattedPrice,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 1,
+                            color: Color(0x40000000),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
