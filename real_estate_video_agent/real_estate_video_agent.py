@@ -454,7 +454,7 @@ class RealEstateVideoAgent:
                 if len(current_group) == 3 or word.endswith(('.', '!', '?', ',')):
                     word_groups.append(current_group)
                     current_group = []
-            if current_group:
+            if current_group: 
                 word_groups.append(current_group)
             
             # Calculate timing
